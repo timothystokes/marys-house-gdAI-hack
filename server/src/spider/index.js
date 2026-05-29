@@ -309,11 +309,11 @@ export async function crawlSource(source, { onProgress } = {}) {
 
   // Seed the queue with the source URL if we've never seen it.
   stmts.enqueue.run(source.id, normaliseUrl(source.url, source.url) || source.url, 0);
-  // Re-crawl semantics: re-queue every page we've previously visited so each crawl
-  // refreshes assessments against the current eligibility profile and catches
-  // updated deadlines/amounts. New pages discovered via outbound links during
-  // this run are still enqueued and processed in the same loop.
-  stmts.requeueAll.run(source.id);
+  // Re-crawl semantics: only retry previously failed pages — leave 'done' and
+  // 'skipped' alone so we don't burn LLM quota re-assessing opportunities we
+  // already know about. New pages discovered via outbound links are still
+  // enqueued and processed normally.
+  stmts.requeueFailed.run(source.id);
 
   let fetchedThisRun = 0;
   let insertedGrants = 0;

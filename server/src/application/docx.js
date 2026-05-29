@@ -42,6 +42,7 @@ function paragraphsFromMarkdown(md) {
   const lines = md.replace(/\r\n/g, '\n').split('\n');
   const out = [];
   let paragraphBuf = [];
+  let seenHeading = false;
 
   const flushPara = () => {
     if (!paragraphBuf.length) return;
@@ -55,14 +56,22 @@ function paragraphsFromMarkdown(md) {
     // Blank line → paragraph break
     if (!line.trim()) { flushPara(); continue; }
 
-    // Headings
+    // Headings — add a thin top border so each section is visually separated
+    // by a hairline rule above the heading text. Skipped for the very first
+    // heading in the document (no rule above the doc title).
     const h = line.match(/^(#{1,6})\s+(.*)$/);
     if (h) {
       flushPara();
-      out.push(new Paragraph({
-        heading: HEADING_MAP[h[1].length],
+      const level = h[1].length;
+      const para = new Paragraph({
+        heading: HEADING_MAP[level],
         children: inlineRuns(h[2]),
-      }));
+        border: seenHeading ? {
+          top: { color: 'BFBFBF', space: 8, style: 'single', size: 8 },
+        } : undefined,
+      });
+      out.push(para);
+      seenHeading = true;
       continue;
     }
 
@@ -120,10 +129,22 @@ export async function markdownToDocxBuffer(markdown, { title } = {}) {
     title: title || 'Grant Application Draft',
     description: 'AI-generated draft application',
     styles: {
+      default: {
+        document: {
+          run: { font: 'Arial', size: 22 }, // 11pt body
+          paragraph: { spacing: { after: 160 } }, // ~8pt after every paragraph
+        },
+      },
       paragraphStyles: [
-        { id: 'Heading1', name: 'Heading 1', basedOn: 'Normal', next: 'Normal', run: { size: 32, bold: true, color: '1a2744' } },
-        { id: 'Heading2', name: 'Heading 2', basedOn: 'Normal', next: 'Normal', run: { size: 26, bold: true, color: '1a2744' } },
-        { id: 'Heading3', name: 'Heading 3', basedOn: 'Normal', next: 'Normal', run: { size: 22, bold: true, color: 'c0392b' } },
+        { id: 'Heading1', name: 'Heading 1', basedOn: 'Normal', next: 'Normal',
+          run: { font: 'Arial', size: 32, bold: true, color: '000000' },
+          paragraph: { spacing: { before: 320, after: 200 } } },
+        { id: 'Heading2', name: 'Heading 2', basedOn: 'Normal', next: 'Normal',
+          run: { font: 'Arial', size: 26, bold: true, color: '000000' },
+          paragraph: { spacing: { before: 280, after: 180 } } },
+        { id: 'Heading3', name: 'Heading 3', basedOn: 'Normal', next: 'Normal',
+          run: { font: 'Arial', size: 22, bold: true, color: '000000' },
+          paragraph: { spacing: { before: 240, after: 160 } } },
       ],
     },
     sections: [{ children }],

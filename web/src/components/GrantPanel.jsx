@@ -190,7 +190,7 @@ export default function GrantPanel({ grantId }) {
             <button className="btn-primary" onClick={handleGenerate} disabled={generating}>
               {generating
                 ? <><span className="spinner" /> Generating &amp; downloading…</>
-                : drafts.length ? '🔄 Regenerate &amp; Download' : '✨ Generate Draft (.docx)'
+                : drafts.length ? '🔄 Regenerate & Download' : '✨ Generate Draft (.docx)'
               }
             </button>
           </div>
