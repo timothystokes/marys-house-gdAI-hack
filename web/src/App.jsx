@@ -5,10 +5,10 @@ export default function App() {
     <div className="app">
       <header className="topbar">
         <div className="brand">
-          <span className="brand-dot" />
+          <div className="brand-icon">🏠</div>
           <div>
             <div className="brand-title">Mary's House</div>
-            <div className="brand-sub">Opportunity Finder</div>
+            <div className="brand-sub">Grant Intelligence</div>
           </div>
         </div>
         <nav className="nav">
@@ -16,7 +16,12 @@ export default function App() {
           <NavLink to="/sources">Sources</NavLink>
         </nav>
       </header>
-      <main className="main">
+
+      <div className="banner">
+        ⚠️&nbsp; All outputs are AI-generated drafts. Human review required before any submission.
+      </div>
+
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         <Outlet />
       </main>
     </div>
