@@ -396,6 +396,27 @@ input, select { font: inherit; }
 .grant-row.selected::before { opacity: 1; }
 .grant-row.selected:hover   { transform: none; }
 
+/* Star button */
+.star-btn {
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin-top: 2px;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--text-4);
+  opacity: 0;
+  transition: opacity var(--t-fast), color var(--t-fast), transform var(--t-fast);
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.grant-row:hover .star-btn { opacity: 1; }
+.star-btn.star-btn-on {
+  opacity: 1;
+  color: #f59e0b;
+}
+.star-btn:hover { color: #f59e0b; transform: scale(1.2); }
+
 /* Score mini badge */
 .score-mini {
   flex-shrink: 0;

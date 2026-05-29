@@ -28,8 +28,23 @@ export default function Dashboard() {
   const [sort, setSort] = useState('score');
   const [selectedId, setSelectedId] = useState(null);
   const [activeTag, setActiveTag] = useState(null);
+  const [starred, setStarred] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('starred-grants') || '[]')); }
+    catch { return new Set(); }
+  });
+
+  const toggleStar = (id, e) => {
+    e.stopPropagation();
+    setStarred(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      localStorage.setItem('starred-grants', JSON.stringify([...next]));
+      return next;
+    });
+  };
 
   useEffect(() => {
+    if (sort === 'favourites') return; // favourites is client-side only
     setLoading(true);
     api.grants.list({
       sort,
@@ -58,11 +73,12 @@ export default function Dashboard() {
     return TAG_RULES.filter(r => counts[r.label]).map(r => ({ ...r, count: counts[r.label] }));
   }, [grants]);
 
-  // Apply tag filter client-side
+  // Apply tag + favourites filter client-side
   const visibleGrants = useMemo(() => {
-    if (!activeTag) return grants;
-    return grants.filter(g => getGrantTags(g).includes(activeTag));
-  }, [grants, activeTag]);
+    let filtered = activeTag ? grants.filter(g => getGrantTags(g).includes(activeTag)) : grants;
+    if (sort === 'favourites') filtered = filtered.filter(g => starred.has(g.id));
+    return filtered;
+  }, [grants, activeTag, starred, sort]);
 
   const stats = useMemo(() => {
     const total    = visibleGrants.length;
@@ -125,6 +141,7 @@ export default function Dashboard() {
               <option value="score">Best fit</option>
               <option value="deadline">Deadline</option>
               <option value="amount">Amount</option>
+              <option value="favourites">⭐ Favourites</option>
             </select>
           </div>
         </div>
@@ -169,6 +186,8 @@ export default function Dashboard() {
               key={g.id}
               grant={g}
               selected={g.id === selectedId}
+              starred={starred.has(g.id)}
+              onStar={e => toggleStar(g.id, e)}
               onClick={() => setSelectedId(g.id)}
             />
           ))}
@@ -193,13 +212,13 @@ export default function Dashboard() {
   );
 }
 
-function GrantRow({ grant: g, selected, onClick }) {
+function GrantRow({ grant: g, selected, starred, onStar, onClick }) {
   const days  = daysUntil(g.deadline);
   const color = scoreColor(g.score);
 
   return (
     <div
-      className={`grant-row${selected ? ' selected' : ''}`}
+      className={`grant-row${selected ? ' selected' : ''}${starred ? ' starred' : ''}`}
       onClick={onClick}
       role="button"
       tabIndex={0}
@@ -231,6 +250,15 @@ function GrantRow({ grant: g, selected, onClick }) {
         <SubScoreChips grant={g} />
         <div className="grant-row-amount">{fmtAmount(g)}</div>
       </div>
+
+      <button
+        className={`star-btn${starred ? ' star-btn-on' : ''}`}
+        onClick={onStar}
+        title={starred ? 'Unpin' : 'Pin to top'}
+        aria-label={starred ? 'Unpin grant' : 'Pin grant to top'}
+      >
+        {starred ? '★' : '☆'}
+      </button>
     </div>
   );
 }
