@@ -38,6 +38,12 @@ const USER_AGENT = process.env.SPIDER_USER_AGENT || DEFAULT_UA;
 const ASSET_EXT = /\.(png|jpe?g|gif|svg|webp|pdf|zip|mp4|mp3|css|js|ico|woff2?)(\?|$)/i;
 const GRANT_SIGNALS = /\b(grant|funding|apply|application|deadline|round|fellowship|scholarship)\b/i;
 const GUIDELINE_HINT = /(guideline|criteria|fact[-_ ]?sheet|info|fund|grant|apply|eligibility)/i;
+// Titles / URL slugs that strongly indicate a directory/landing/help page (not a specific opportunity).
+const NON_OPPORTUNITY_TITLE = /\b(home|welcome|sign\s*in|log\s*in|register|contact|about|faq|help|search|browse|directory|list(?:ing)?s?|index|category|categories|news|blog|media|privacy|terms|accessibility|glossary|sitemap|disclaimer|forecast|upcoming|landing)\b/i;
+const NON_OPPORTUNITY_URL = /\/(home|search|browse|index|about|contact|faq|help|news|blog|media|privacy|terms|accessibility|glossary|sitemap|forecast|categor(?:y|ies)|tag|login|register|signin|signup|account|profile)\b/i;
+// Minimum AI fit to bother saving. Below this we drop the row entirely so the
+// UI isn't polluted with clearly-ineligible noise; tune via env if desired.
+const MIN_SAVE_SCORE = Number(process.env.MIN_SAVE_SCORE ?? 10);
 const MAX_PDF_BYTES = 2 * 1024 * 1024;      // 2 MB
 const MAX_PDFS_PER_OPP = 2;
 
@@ -70,7 +76,7 @@ const stmts = {
       @source_id, @title, @funder, @funder_type, @amount_min, @amount_max, @currency,
       @deadline, @eligibility, @description, @source_url, @status,
       @mission_fit, @eligibility_fit, @funding_value, @win_likelihood, @timing_score,
-      @score, @score_rationale, @assessment_json, datetime('now')
+      @score, @score_rationale, @assessment_json, @assessed_at
     )
   `),
   updateGrantAssessment: db.prepare(`
@@ -147,6 +153,15 @@ function extractGrant($, url) {
   const title = ($('h1').first().text() || $('title').text() || '').trim();
   const bodyText = cleanPageText($).slice(0, 4000); // hint-extraction text
   if (!title || !GRANT_SIGNALS.test(title + ' ' + bodyText)) return null;
+
+  // Cheap pre-filter: skip obvious directory/help/landing pages before paying for the LLM.
+  // Note: we still let through pages whose title looks suspect IF the URL clearly identifies
+  // a specific opportunity (e.g. contains an id like GO1234, /grant/123/, etc.).
+  const looksLikeSpecificUrl = /\/(GO|GR|GA|grant|round|program)[\/\-]?\d+/i.test(url);
+  if (!looksLikeSpecificUrl) {
+    if (NON_OPPORTUNITY_TITLE.test(title)) return null;
+    if (NON_OPPORTUNITY_URL.test(url)) return null;
+  }
 
   const description = ($('meta[name="description"]').attr('content')
     || $('p').first().text() || bodyText.slice(0, 400)).trim().slice(0, 800);
@@ -254,6 +269,10 @@ export async function crawlSource(source, { onProgress } = {}) {
 
   startStatus(source.id, maxPages);
 
+  if (!process.env.GITHUB_TOKEN) {
+    console.warn('[spider] ⚠️  GITHUB_TOKEN is not set — opportunities will be saved without AI assessment (no scores, no sub-scores). Add it to .env and re-crawl.');
+  }
+
   // Seed the queue with the source URL if we've never seen it.
   stmts.enqueue.run(source.id, normaliseUrl(source.url, source.url) || source.url, 0);
   // Re-queue previously failed pages so "Search now" acts as a retry.
@@ -311,12 +330,19 @@ export async function crawlSource(source, { onProgress } = {}) {
             }
 
             if (assessed && assessed.is_opportunity !== false) {
-              const info = stmts.insertGrant.run({
-                source_id: source.id,
-                source_url: row.url,
-                ...assessed,
-              });
-              if (info.changes > 0) insertedGrants++;
+              // Drop clearly-ineligible noise (e.g. medical research, aged-care-only grants).
+              // Keep the crawl_pages row as 'done' so we don't re-process; just don't save the grant.
+              if ((assessed.score ?? 0) < MIN_SAVE_SCORE) {
+                console.log(`[spider] skip low-fit (${assessed.score}) ${row.url} — ${assessed.title}`);
+              } else {
+                const info = stmts.insertGrant.run({
+                  source_id: source.id,
+                  source_url: row.url,
+                  assessed_at: new Date().toISOString(),
+                  ...assessed,
+                });
+                if (info.changes > 0) insertedGrants++;
+              }
             } else if (!assessed) {
               // AI unavailable — fall back to heuristic insert so we don't lose the page.
               const info = stmts.insertGrant.run({
@@ -340,6 +366,7 @@ export async function crawlSource(source, { onProgress } = {}) {
                 score: null,
                 score_rationale: 'Pending AI assessment.',
                 assessment_json: null,
+                assessed_at: null,
               });
               if (info.changes > 0) insertedGrants++;
             }

@@ -78,8 +78,20 @@ Sub-score guidance:
 
   timing            100 = 6+ weeks lead time, deadline known. 50 = 2-4 weeks. 0 = past deadline or < 1 week.
 
-If the page is NOT an opportunity (about us, news article, etc.), set is_opportunity=false and you
-may zero out the sub-scores.`;
+IS_OPPORTUNITY — be strict. Set is_opportunity = TRUE only if ALL of the following hold:
+  * The page describes ONE specific, identifiable funding offer (a named grant round, fund, scholarship,
+    sponsorship, or fellowship) that an eligible organisation could actually apply for.
+  * There is enough detail to identify the funder OR the funded activity OR an application route.
+
+Set is_opportunity = FALSE for:
+  * Listing/directory pages ("Current Grant Opportunity List", search results, category indexes).
+  * Landing/help/welcome pages ("Welcome to GrantConnect", "About us", "How it works", "FAQs", "Contact").
+  * Forecast / upcoming / "Forecast Opportunity" pages that flag a future round with no current intake.
+  * News articles, blog posts, or media releases about past grant awards.
+  * Privacy / terms / accessibility / glossary / login / register pages.
+  * Pages that ONLY link to opportunities elsewhere without being one themselves.
+
+When is_opportunity = FALSE, zero out the sub-scores and keep title/description so we can log it.`;
 
 function safeParseJson(text) {
   if (!text) return null;

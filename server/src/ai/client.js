@@ -13,7 +13,7 @@ const ENDPOINT = 'https://models.inference.ai.azure.com/chat/completions';
 
 export async function chat(messages, { model } = {}) {
   const token = process.env.GITHUB_TOKEN;
-  const chosenModel = model || process.env.GITHUB_MODEL || 'openai/gpt-4o-mini';
+  const chosenModel = model || process.env.GITHUB_MODEL || 'gpt-4o-mini';
   if (!token) throw new Error('GITHUB_TOKEN is not set. Get one at https://github.com/settings/tokens');
 
   const res = await fetch(ENDPOINT, {
