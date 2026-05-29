@@ -823,3 +823,44 @@ input, select { font: inherit; }
   .panel-stats { grid-template-columns: 1fr 1fr; }
   .sources-page { padding: 24px 20px; }
 }
+/* ── Crawl status (Sources page rows) ─────────────────────────────────── */
+.crawl-status { margin-top: 10px; padding: 10px 12px; border-radius: 8px; background: var(--bg-subtle); border: 1px solid var(--border); }
+.crawl-running { background: rgba(37, 99, 235, 0.06); border-color: rgba(37, 99, 235, 0.20); }
+.crawl-idle { background: rgba(5, 150, 105, 0.06); border-color: rgba(5, 150, 105, 0.20); }
+.crawl-error { background: rgba(220, 38, 38, 0.06); border-color: rgba(220, 38, 38, 0.20); }
+.crawl-bar { height: 6px; background: var(--bg-muted); border-radius: 3px; overflow: hidden; margin-bottom: 6px; }
+.crawl-bar-fill { height: 100%; background: var(--rose-600); transition: width 0.4s ease; }
+.crawl-line { font-size: 13px; color: var(--text-1); }
+.crawl-done { color: var(--green); }
+.crawl-error .crawl-line { color: var(--red); }
+.crawl-url { font-size: 11px; color: var(--text-3); margin-top: 4px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+/* ── Source row inline edit form ──────────────────────────────────────── */
+.source-edit { display: flex; flex-direction: column; gap: 10px; }
+.source-edit label { display: flex; flex-direction: column; font-size: 12px; color: var(--text-2); gap: 4px; font-weight: 500; }
+.source-edit label input { padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font: inherit; color: var(--text-1); background: var(--bg); }
+.source-edit label input:focus { outline: 2px solid var(--rose-600); outline-offset: -2px; }
+.source-edit-row { display: flex; gap: 10px; }
+.source-edit-row label { flex: 1; }
+.source-edit-actions { display: flex; gap: 8px; }
+
+/* ── Eligibility page ─────────────────────────────────────────────────── */
+.eligibility { padding: 32px 36px; max-width: 1100px; margin: 0 auto; width: 100%; }
+.eligibility .elig-actions { display: flex; gap: 8px; }
+.eligibility-editor {
+  width: 100%;
+  min-height: 60vh;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  resize: vertical;
+  margin-top: 12px;
+  color: var(--text-1);
+  box-shadow: var(--shadow-xs);
+}
+.eligibility-editor:focus { outline: 2px solid var(--rose-600); outline-offset: -2px; }

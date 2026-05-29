@@ -30,4 +30,8 @@ export const api = {
     create: (grantId) => req(`/drafts/${grantId}`, { method: 'POST' }),
     listForGrant: (grantId) => req(`/drafts/grant/${grantId}`),
   },
+  eligibility: {
+    get: () => req('/eligibility'),
+    save: (content) => req('/eligibility', { method: 'PUT', body: JSON.stringify({ content }) }),
+  },
 };

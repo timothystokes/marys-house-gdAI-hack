@@ -41,15 +41,24 @@ router.post('/', (req, res) => {
 });
 
 router.patch('/:id', (req, res) => {
-  const { name, enabled } = req.body || {};
+  const { name, enabled, max_pages, max_depth, request_delay_ms } = req.body || {};
   const url = req.body?.url !== undefined ? normaliseUrl(req.body.url) : undefined;
   if (req.body?.url !== undefined && !url) return res.status(400).json({ error: 'invalid url' });
   const current = db.prepare('SELECT * FROM sources WHERE id = ?').get(req.params.id);
   if (!current) return res.status(404).json({ error: 'not_found' });
-  db.prepare('UPDATE sources SET name = ?, url = ?, enabled = ? WHERE id = ?').run(
+
+  const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, Math.round(Number(n))));
+  const newMaxPages = max_pages === undefined ? current.max_pages : clamp(max_pages, 1, 1000);
+  const newMaxDepth = max_depth === undefined ? current.max_depth : clamp(max_depth, 0, 10);
+  const newDelay = request_delay_ms === undefined ? current.request_delay_ms : clamp(request_delay_ms, 0, 60000);
+
+  db.prepare(`UPDATE sources SET name = ?, url = ?, enabled = ?, max_pages = ?, max_depth = ?, request_delay_ms = ? WHERE id = ?`).run(
     name ?? current.name,
     url ?? current.url,
     enabled === undefined ? current.enabled : (enabled ? 1 : 0),
+    newMaxPages,
+    newMaxDepth,
+    newDelay,
     req.params.id,
   );
   res.json(withStatus(db.prepare('SELECT * FROM sources WHERE id = ?').get(req.params.id)));

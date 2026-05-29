@@ -3,7 +3,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-export const ORG_PROFILE = fs.readFileSync(path.join(__dirname, 'org-profile.md'), 'utf8');
+// org-profile.md is loaded on every request rather than at startup so that
+// edits made via the Eligibility tab take effect immediately without a restart.
+export function getOrgProfile() {
+  return fs.readFileSync(path.join(__dirname, 'org-profile.md'), 'utf8');
+}
 
 const ENDPOINT = 'https://models.inference.ai.azure.com/chat/completions';
 

@@ -5,6 +5,7 @@ import { initDb } from './db/db.js';
 import grantsRouter from './routes/grants.js';
 import sourcesRouter from './routes/sources.js';
 import draftsRouter from './routes/drafts.js';
+import eligibilityRouter from './routes/eligibility.js';
 
 dotenv.config({ path: '../.env' });
 dotenv.config();
@@ -19,6 +20,7 @@ app.get('/api/health', (_req, res) => res.json({ ok: true, ts: Date.now() }));
 app.use('/api/grants', grantsRouter);
 app.use('/api/sources', sourcesRouter);
 app.use('/api/drafts', draftsRouter);
+app.use('/api/eligibility', eligibilityRouter);
 
 const port = process.env.PORT || 3001;
 app.listen(port, () => {

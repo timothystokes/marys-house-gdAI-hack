@@ -14,6 +14,7 @@ export default function App() {
         <nav className="nav">
           <NavLink to="/" end>Dashboard</NavLink>
           <NavLink to="/sources">Sources</NavLink>
+          <NavLink to="/eligibility">Eligibility</NavLink>
         </nav>
       </header>
 

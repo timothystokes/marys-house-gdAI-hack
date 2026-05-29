@@ -1,10 +1,10 @@
-import { chat, ORG_PROFILE } from './client.js';
+import { chat, getOrgProfile } from './client.js';
 
 export async function scoreGrant(grant) {
   const messages = [
     {
       role: 'system',
-      content: `You score grant opportunities for Mary's House Services. Return ONLY JSON: {"score": 0-100, "rationale": "<= 2 sentences"}. Higher score = stronger fit and higher likely value.\n\nORGANISATION PROFILE:\n${ORG_PROFILE}`,
+      content: `You score grant opportunities for Mary's House Services. Return ONLY JSON: {"score": 0-100, "rationale": "<= 2 sentences"}. Higher score = stronger fit and higher likely value.\n\nORGANISATION PROFILE:\n${getOrgProfile()}`,
     },
     {
       role: 'user',
