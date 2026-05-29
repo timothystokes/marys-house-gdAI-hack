@@ -1,8 +1,8 @@
-# Mary's House Grant Finder
+# Mary's House Funding Opportunity Finder
 
-An AI-powered grant and philanthropy discovery platform for [Mary's House Services](https://www.maryshouse.org.au/) — an Australian not-for-profit providing safety, support and independence for women and children affected by domestic violence.
+An AI-powered grant and philanthropy discovery platform for **[Mary's House Services](https://www.maryshouse.org.au/)** — an Australian not-for-profit providing safety, support and independence for women and children affected by domestic and family violence.
 
-This project automatically spiders curated web sources for grant and philanthropy opportunities, ranks them by their likely value and fit for Mary's House, and assists fundraising staff in generating draft applications.
+The platform automatically crawls curated funding sources, scores every opportunity for fit against Mary's House's mission and eligibility, and generates a first-draft application as a downloadable Word document.
 
 ---
 
@@ -14,201 +14,197 @@ Prerequisites: **Node.js ≥ 20**.
 # 1. Install all workspace dependencies (server + web)
 npm install
 
-# 2. Load your seed sources from server/src/spider/seeds.json (idempotent upsert)
+# 2. Configure your GitHub Models token (used for AI scoring + draft generation)
+cp .env.example .env
+#   → edit .env and set GITHUB_TOKEN to a personal access token
+#     with access to https://github.com/marketplace/models
+
+# 3. Load the seed sources into the DB (idempotent)
 npm run seed:sources
 
-# 3. Run the backend API and React UI together (recommended)
+# 4. Run the backend API and React UI together
 npm run dev
 #   → API:  http://localhost:3001
 #   → Web:  http://localhost:5173
+```
 
-# OR run them separately in two terminals
+Open http://localhost:5173, jump to **Sources**, and click **🔍 Crawl** on any source to fetch + score its opportunities.
+
+To run the two halves separately:
+```bash
 npm run dev:server   # Express API on :3001 (auto-reloads)
 npm run dev:web      # Vite React UI on :5173 (proxies /api → :3001)
 ```
 
-> 💡 Then open http://localhost:5173/sources and click **"🔍 Search all enabled sources"** to trigger your first crawl. To use the **Generate draft** button (and live AI scoring later), copy `.env.example` to `.env` and set `GITHUB_TOKEN` to a [GitHub personal access token](https://github.com/settings/tokens) with access to [GitHub Models](https://github.com/marketplace/models).
+### Environment
 
-Useful endpoints once the server is running:
+`.env` (root):
+```
+GITHUB_TOKEN=ghp_...                       # classic PAT works best
+GITHUB_MODEL=openai/gpt-4.1-mini           # default; any GitHub Models model id
+AI_MIN_GAP_MS=1500                         # min gap between AI calls (rate-limit safety)
+PORT=3001
+```
+
+If GitHub Models returns a daily-quota 429 the server now **fails fast** with a clear error rather than hanging — switch model tier (`openai/gpt-4.1-mini` is High tier; `openai/gpt-4.1-nano` is Low) or wait for the quota reset.
+
+---
+
+## 🧭 What it does
+
+```
+┌─────────────┐   ┌─────────────┐   ┌──────────────┐   ┌─────────────┐   ┌────────────┐
+│   Sources   │──▶│   Spider    │──▶│  AI Assess   │──▶│   SQLite    │──▶│  React UI  │
+│ (UI / seed) │   │ (HTML+PDF)  │   │  (5 scores)  │   │             │   │            │
+└─────────────┘   └─────────────┘   └──────────────┘   └─────────────┘   └─────┬──────┘
+                                                                                │
+                                          ┌─────────────────────────────────────┘
+                                          ▼
+                                  ┌──────────────────┐
+                                  │  Draft Generator │──▶ .docx download
+                                  │ (template + LLM) │
+                                  └──────────────────┘
+```
+
+1. **Crawl** — for each enabled source, the spider walks pages (and any linked PDF guidelines), cleans the text, and presents each page to the AI agent.
+2. **Triage** — a three-layer filter drops obvious non-opportunities: a URL/title regex pre-filter, an `is_opportunity` decision by the LLM, then a minimum-score threshold.
+3. **Assess** — every surviving opportunity is scored on five sub-scores (mission, eligibility, funding value, win likelihood, timing). Eligibility acts as a hard gate, so a hard disqualifier caps the final score.
+4. **Browse** — the React UI ranks opportunities by final score and shows an animated radar chart breakdown per grant.
+5. **Draft** — one click sends the funder + opportunity context, the organisation profile, and a templated application form to the LLM and returns a downloadable, Arial-formatted `.docx`.
+
+---
+
+## ✨ Implemented features
+
+### Backend (Node.js + Express + SQLite)
+- **Configurable sources** — add/remove/enable scrape sources via UI or `npm run seed:sources` from `server/src/spider/seeds.json`.
+- **Polite spider** — same-origin link following, `robots.txt`-friendly defaults, identifying User-Agent, depth/page caps per source.
+- **PDF guideline extraction** — picks up linked `.pdf` files (e.g. funder application guidelines) and parses them locally via `pdf-parse` v2.
+- **Three-layer junk filter** — regex pre-filter on titles/URLs → LLM `is_opportunity` flag → `MIN_SAVE_SCORE` threshold drops anything that slips through.
+- **AI assessment agent** with five sub-scores grounded in `server/src/ai/org-profile.md`:
+  | Score | Weight |
+  |---|---|
+  | mission_fit       | 35% |
+  | eligibility_fit   | 25% (hard gate) |
+  | funding_value     | 15% |
+  | win_likelihood    | 15% |
+  | timing_score      | 10% |
+- **Eligibility gating** — if eligibility ≤ 20 the final score is forced into the single digits, regardless of the other dimensions, so disqualified opportunities don't crowd the top of the list.
+- **Hot-reloadable grounding files** — `org-profile.md` and `application/template.md` are re-read from disk on every AI call; non-developers can edit them and see the impact immediately.
+- **Recrawl semantics** — pages already marked `done` are left alone; only `failed` pages are retried. Use the explicit reassess endpoints to re-score everything against an updated profile.
+- **GitHub Models client** — serialised queue with configurable inter-call gap, exponential backoff honouring `Retry-After` / `x-ratelimit-reset`, hard ceiling on retry waits, and fast-fail on daily-quota exhaustion.
+- **Draft generation** — combines the latest template, organisation profile, and assessed opportunity into a detailed application; placeholders the AI cannot answer come back as `[TBD: …]` markers. Output is converted into a Word document (Arial body, black headings, hairline rules between sections, sanitised filename based on the opportunity title).
+
+### Frontend (React + Vite)
+- **Dashboard** — sortable, filterable list of opportunities with score chips for each of the five sub-dimensions.
+- **Detail panel** — opportunity title, funder, type, status, a short description paragraph, headline funding + deadline stats, a side-by-side **AI Fit Score** + **animated radar Score Breakdown**, eligibility text, source link, and the Draft Application section.
+- **Generate Draft (.docx)** — one button generates the application, downloads it, and updates the "Latest draft generated …" caption. A second button re-downloads the most recent draft from the DB without re-running the LLM.
+- **Sources page** — list of crawl sources with per-source crawl button.
+- **Eligibility editor** — edit `org-profile.md` from the browser; saves straight back to disk for the next AI call.
+- **About** — full-screen presentation embedded in a persistent iframe so the current slide and scroll position are retained when navigating between tabs.
+
+---
+
+## 🔌 API surface
 
 | Endpoint | Purpose |
 |---|---|
 | `GET  /api/health` | Liveness check |
-| `GET  /api/grants?sort=score` | Ranked grants list (filter: `q`, `funderType`, `status`) |
-| `GET  /api/grants/:id` | Single grant detail |
+| `GET  /api/grants?sort=score&order=desc` | Ranked grants list. Filters: `q`, `funderType`, `status` |
+| `GET  /api/grants/:id` | Single grant detail incl. all sub-scores + raw assessment JSON |
+| `POST /api/grants/:id/reassess` | Re-run the AI assessment against the current profile |
+| `POST /api/grants/reassess-all` | Re-assess every saved grant (uses LLM quota — heads up) |
 | `GET/POST/PATCH/DELETE /api/sources` | Manage scrape sources |
-| `POST /api/drafts/:grantId` | Generate AI draft application (requires `GITHUB_TOKEN`) |
+| `POST /api/sources/:id/crawl` | Crawl a single source now |
+| `POST /api/sources/crawl-all` | Crawl every enabled source |
+| `GET  /api/eligibility` / `PUT /api/eligibility` | Read/write `org-profile.md` |
+| `POST /api/drafts/:grantId` | Generate a draft and store it (returns JSON) |
+| `POST /api/drafts/:grantId/docx` | Generate a draft, store it, **stream the `.docx`** in one request |
+| `GET  /api/drafts/:draftId/docx` | Download an existing draft as `.docx` (no LLM call) |
+| `GET  /api/drafts/grant/:grantId` | List existing drafts for a grant |
 
-### Data commands
+---
+
+## 🧱 Tech stack
+
+| Layer       | Choice                                            |
+|-------------|---------------------------------------------------|
+| Backend     | Node.js, Express, `better-sqlite3`                |
+| Spider      | `node-fetch`, `cheerio`, `pdf-parse` v2 (local PDFs) |
+| AI          | **GitHub Models** (`https://models.github.ai/inference`) — defaults to `openai/gpt-4.1-mini` |
+| Word export | `docx` — Arial body, paragraph spacing, hairline rule per heading |
+| Database    | SQLite (file at `data/grants.db`)                 |
+| Frontend    | React 18 + Vite + React Router                    |
+| Charts      | Hand-rolled SVG (no chart lib)                    |
+
+---
+
+## 📁 Project structure
+
+```
+.
+├── server/
+│   └── src/
+│       ├── spider/              # Crawler, link extraction, junk filters, seed loader
+│       ├── ai/
+│       │   ├── client.js        # Throttled GitHub Models client
+│       │   ├── assess.js        # 5-score assessment agent + gated final score
+│       │   ├── draft.js         # Application drafter
+│       │   └── org-profile.md   # Editable eligibility/mission grounding
+│       ├── application/
+│       │   ├── template.md      # Australian gov-style application template
+│       │   └── docx.js          # Markdown → .docx converter
+│       ├── db/db.js             # Schema + migrations + prepared statements
+│       └── routes/              # grants, sources, drafts, eligibility, health
+├── web/
+│   ├── public/
+│   │   └── about.html           # Standalone presentation served at /about
+│   └── src/
+│       ├── pages/               # Dashboard, GrantDetail, Sources, Eligibility, About
+│       ├── components/          # GrantPanel, SubScoreRadar, etc.
+│       ├── api/client.js        # Typed-ish API wrappers (drafts include docx helpers)
+│       └── styles/app.css
+└── data/grants.db               # SQLite store (gitignored)
+```
+
+---
+
+## 🔧 Data & maintenance commands
 
 | Command | Effect |
 |---|---|
-| `npm run seed:sources` | **Idempotent upsert** from `server/src/spider/seeds.json` into the `sources` table. Re-run any time after editing the seed file — won't touch grants, drafts, or sources you've added via the UI (unless they share a URL). |
-| `npm run seed:demo` | **⚠️ Destructive** — wipes sources/grants/drafts and inserts a fixed set of demo data for UI development. Don't run this once you have real data. |
+| `npm run seed:sources` | Idempotent upsert of `server/src/spider/seeds.json` into the `sources` table. Re-run any time you edit the seed file. |
+| `npm run seed:demo` | **⚠️ Destructive** — wipes sources/grants/drafts and inserts demo data for UI work. |
 
-To reset the database manually:
+Reset the database manually:
 ```bash
 sqlite3 data/grants.db "DELETE FROM drafts; DELETE FROM grants; DELETE FROM crawl_pages; DELETE FROM sources;"
 ```
 
 ---
 
-## 🎯 Problem
-
-Fundraising teams at NFPs like Mary's House spend hundreds of hours each year:
-
-- Manually searching dozens of grant directories, foundation websites and government portals.
-- Triaging which opportunities are actually relevant and worth pursuing.
-- Drafting initial application content from scratch for each grant.
-
-This tool aims to compress that work from days to minutes.
-
-## 🧭 Solution Overview
-
-A backend scraper (spider) collects grant opportunities from a **configurable list of sources**. Each opportunity is enriched and scored by an LLM against Mary's House's mission and funding needs. A React web UI presents a ranked list and, on demand, generates a draft application tailored to the selected grant.
-
-```
-┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐
-│  Spider /    │──▶│  Normaliser  │──▶│ AI Ranker &  │──▶│  React Web   │
-│  Scrapers    │   │  + SQLite    │   │ Draft Writer │   │     UI       │
-└──────────────┘   └──────────────┘   └──────────────┘   └──────────────┘
-       ▲                                                         │
-       │                                                         │
-       └──────── Admin-managed source list ◀─────────────────────┘
-```
-
-## ✨ Core Features
-
-### Backend (Node.js)
-- **Configurable spider** — admins add/remove grant source URLs via the UI; no code changes required.
-- **Scheduled crawling** — periodic re-scrape to surface new opportunities and detect closing deadlines.
-- **Normalisation** — extracted grants stored in a consistent schema (title, funder, amount, eligibility, deadline, description, source URL).
-- **AI propensity scoring** — each grant scored 0–100 against Mary's House's profile, with a short rationale.
-- **Draft application generator** — produces a first-draft application for any selected grant, grounded in Mary's House's mission, services and impact data.
-
-### Frontend (React)
-- **Ranked grants dashboard** — sortable/filterable by score, deadline, amount, funder type.
-- **Grant detail view** — full description, eligibility, AI rationale, link to source.
-- **One-click draft generation** — produce, edit and export a draft application (Markdown / DOCX).
-- **Source management** — admin screen to add/remove/enable scrape sources.
-
-## 🧱 Tech Stack
-
-| Layer       | Choice                                          |
-|-------------|-------------------------------------------------|
-| Backend     | **Node.js** (Express, scheduled jobs)           |
-| Scraping    | Playwright / Cheerio (handles static + JS sites)|
-| Database    | **SQLite** (zero-config, file-based)            |
-| AI / LLM    | **GitHub Models** (free for development; supports GPT / Claude / Llama via a single GitHub token) |
-| Frontend    | **React** (Vite)                                |
-| Styling     | TBD (Tailwind likely)                           |
-
-## 🚀 Getting Started
-
-> ⚠️ Scaffolding is in progress. Commands below will be wired up as the codebase lands.
-
-### Prerequisites
-- Node.js ≥ 20
-- A GitHub personal access token with access to [GitHub Models](https://github.com/marketplace/models), exported as `GITHUB_TOKEN`.
-
-### Install
-```bash
-npm install
-```
-
-### Run (dev)
-```bash
-# Run BOTH the backend API and React frontend together (recommended)
-npm run dev
-
-# …or run them individually in separate terminals
-npm run dev:server   # Backend API on :3001
-npm run dev:web      # React frontend on :5173
-```
-
-> ⚠️ The UI needs the API server running, otherwise the dashboard will appear empty. `npm run dev` starts both for you.
-
-### Environment variables
-Copy `.env.example` to `.env` and fill in:
-```
-GITHUB_TOKEN=ghp_...
-GITHUB_MODEL=openai/gpt-4o-mini      # or any model available on GitHub Models
-DATABASE_URL=file:./data/grants.db
-PORT=3001
-```
-
-## 📁 Project Structure (planned)
-
-```
-.
-├── server/              # Node.js backend
-│   ├── src/
-│   │   ├── spider/      # Scraper engine + per-source adapters
-│   │   ├── ai/          # GitHub Models client, prompts, scoring, drafting
-│   │   ├── db/          # SQLite schema + migrations
-│   │   ├── routes/      # REST API
-│   │   └── jobs/        # Scheduled crawl jobs
-│   └── package.json
-├── web/                 # React frontend (Vite)
-│   ├── src/
-│   │   ├── pages/
-│   │   ├── components/
-│   │   └── api/
-│   └── package.json
-├── data/                # SQLite DB + scraped artifacts (gitignored)
-└── README.md
-```
-
 ## 🧠 About Mary's House
 
-Mary's House Services is a Sydney-based NFP supporting women and children affected by domestic and family violence. Their work spans:
+Mary's House Services is a Sydney-based NFP supporting women and children affected by domestic and family violence — through crisis accommodation, outreach and case management, children's wellbeing programs, and community advocacy. Funding from grants, philanthropic trusts and corporate giving directly enables frontline services.
 
-- Crisis accommodation and refuge services
-- Outreach and case management
-- Children's wellbeing programs
-- Community education and advocacy
+The AI assessment and draft generator use Mary's House's public mission, services and impact statements as grounding context. An editable organisation profile lives in `server/src/ai/org-profile.md` so non-developers can refine it over time — including a `## NOT ELIGIBLE FOR (HARD DISQUALIFIERS)` section that the assessment agent treats as a hard gate.
 
-Funding from grants, philanthropic trusts and corporate giving directly enables frontline services. More info: <https://www.maryshouse.org.au/>.
+More info: <https://www.maryshouse.org.au/>.
 
-> The AI ranker and draft generator use Mary's House's public mission, services and impact statements as grounding context. An editable organisation profile lives in `server/src/ai/org-profile.md` so non-developers can refine it over time.
+---
 
-## 📋 Requirements
+## 🛡️ Operational notes
 
-### Functional
-1. Admin can add, edit, disable and remove grant source URLs through the web UI.
-2. Spider periodically fetches each enabled source and extracts grant opportunities.
-3. New and updated grants are persisted in SQLite with deduplication.
-4. Each grant is scored (0–100) for fit/propensity with a short AI-generated rationale.
-5. Users can browse, filter and sort grants by score, deadline, amount and funder.
-6. Users can generate, edit and export an AI-drafted application for any grant.
-7. Closing/expired grants are flagged but not deleted (kept for history).
+- **No beneficiary data** ever leaves the server. The only context sent to the LLM is Mary's House's public profile + publicly available grant text.
+- **Auditability** — every draft row records the model that produced it and the timestamp. Every grant row records the model used for assessment and an `assessment_json` blob with the raw sub-scores and rationale.
+- **Polite crawling** — sensible page/depth caps, configurable inter-page delay, identifying User-Agent. PDF parsing is local; nothing is forwarded to a third-party PDF service.
+- **Out of scope (for now)** — full submission workflows, multi-tenant for other NFPs, CRM integration.
 
-### Non-functional
-- **Free to run during development** — uses GitHub Models free tier and SQLite.
-- **Respectful scraping** — honours `robots.txt`, sensible rate limits, identifying User-Agent.
-- **Privacy** — no beneficiary or client data is sent to any third-party LLM; only Mary's House public profile + public grant data.
-- **Auditability** — every AI score and draft records the model name, prompt version and timestamp.
-- **Portability** — runs locally on a laptop; deployable to a single small VM or container.
-
-### Out of scope (for now)
-- Multi-tenant support for other NFPs.
-- Full application submission / e-signing workflows.
-- CRM integration (Salesforce, HubSpot, etc.).
-
-## 🛣️ Roadmap
-
-- [ ] Backend scaffold (Express + SQLite + Vite React app)
-- [ ] Source management API + UI
-- [ ] First spider adapter (generic HTML + one known directory)
-- [ ] GitHub Models integration (scoring)
-- [ ] Ranked dashboard UI
-- [ ] Draft application generator
-- [ ] Scheduled re-crawl
-- [ ] Export to DOCX / Markdown
+---
 
 ## 🤝 Contributing
 
-This project was started during a Mary's House / GitHub AI hackathon. Issues and PRs welcome.
+Started during a Mary's House / GitHub AI hackathon. Issues and PRs welcome.
 
 ## 📄 License
 
