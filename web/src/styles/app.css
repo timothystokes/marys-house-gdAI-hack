@@ -596,6 +596,38 @@ input, select { font: inherit; }
   margin-bottom: 12px;
 }
 
+.panel-stats-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+/* Description paragraph directly under the title (no panel chrome). */
+.panel-description {
+  margin-top: 12px;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--text-2);
+}
+
+/* Side-by-side row: AI Fit Score (left, narrow) + Score Breakdown (right). */
+.score-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) 1fr;
+  gap: 12px;
+  align-items: stretch;
+  margin-bottom: 12px;
+}
+.score-row > .glass-block {
+  margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
+}
+.fit-score-block .big-score-val {
+  margin-top: 6px;
+}
+@media (max-width: 720px) {
+  .score-row { grid-template-columns: 1fr; }
+}
+
 .panel-stat {
   background: var(--bg);
   border: 1px solid var(--border);

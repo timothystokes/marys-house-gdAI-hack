@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mary's House — Funding Opportunity Finder </title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ========== DESIGN TOKENS — WHITE THEME ========== */
+:root {
+  --blue:         #4B9CD3;
+  --blue-dark:    #2d7ab5;
+  --blue-light:   #7ab8e0;
+  --gradient:     linear-gradient(135deg, #4B9CD3, #2d5fa0, #4B9CD3);
+  --gradient-text: linear-gradient(135deg, #4B9CD3 0%, #2d5fa0 55%, #4B9CD3 100%);
+  --white:        #ffffff;
+  --off-white:    #f7f9fc;
+  --surface:      rgba(255,255,255,0.96);
+  --surface-2:    rgba(75,156,211,0.08);
+  --border:       rgba(75,156,211,0.18);
+  --text-dark:    #1a2744;
+  --text-body:    #374151;
+  --text-muted:   #6b7280;
+  --shadow:       0 6px 32px rgba(75,156,211,0.13);
+  --shadow-lg:    0 12px 48px rgba(75,156,211,0.20);
+  --font-head:    'Space Grotesk', 'Inter', sans-serif;
+  --font-body:    'Inter', sans-serif;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: #f0f5fb;
+  font-family: var(--font-body);
+  overflow: hidden;
+  color: var(--text-dark);
+}
+
+/* ========== SLIDE DECK CONTAINER ========== */
+.deck {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+@media (min-width: 769px) {
+  .deck {
+    max-width: calc(100vh * 16 / 9);
+    max-height: calc(100vw * 9 / 16);
+    margin: auto;
+    position: absolute;
+    inset: 0;
+  }
+}
+
+/* ========== SLIDE BASE ========== */
+.slide {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: clamp(32px,5vh,60px) clamp(40px,6vw,80px);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.45s ease;
+  background: #ffffff;
+  overflow: hidden;
+}
+.slide.active { opacity: 1; visibility: visible; }
+
+/* ========== SOFT BLOBS ========== */
+.slide::before, .slide::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.30;
+  z-index: 0;
+  pointer-events: none;
+}
+.slide::before {
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(75,156,211,0.40), transparent 70%);
+  top: -20%; right: -15%;
+  animation: blob1 16s ease-in-out infinite alternate;
+}
+.slide::after {
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(45,90,160,0.25), transparent 70%);
+  bottom: -15%; left: -12%;
+  animation: blob2 20s ease-in-out infinite alternate;
+}
+.slide:nth-child(2)::before { top:-15%; left:-10%; background: radial-gradient(circle,rgba(75,156,211,0.35),transparent 70%); }
+.slide:nth-child(3)::before { top:-20%; right:-8%; background: radial-gradient(circle,rgba(45,120,200,0.30),transparent 70%); }
+.slide:nth-child(4)::before { top:-10%; left:-15%; }
+.slide:nth-child(5)::before { top:-18%; right:-10%; background: radial-gradient(circle,rgba(75,156,211,0.28),transparent 70%); }
+.slide:nth-child(6)::before { top:-12%; left:-12%; }
+
+@keyframes blob1 { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(30px,20px) scale(1.08); } }
+@keyframes blob2 { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(-25px,15px) scale(1.05); } }
+
+/* ========== SLIDE CONTENT WRAPPER ========== */
+.slide-content {
+  position: relative;
+  z-index: 1;
+  width: 100%; max-width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: clamp(10px, 1.8vh, 24px);
+}
+.slide-content.align-left { align-items: flex-start; text-align: left; }
+.slide-content > * { min-height: 0; flex-shrink: 1; }
+
+/* ========== GRADIENT TEXT ========== */
+.grad {
+  background: var(--gradient-text);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ========== TYPOGRAPHY ========== */
+.slide-title {
+  font-family: var(--font-head);
+  font-size: clamp(28px, 5vw, 62px);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+.slide-subtitle {
+  font-size: clamp(16px, 2.2vw, 26px);
+  font-weight: 500;
+  color: var(--text-body);
+  line-height: 1.4;
+}
+.slide-text {
+  font-size: clamp(14px, 1.8vw, 20px);
+  color: var(--text-body);
+  line-height: 1.6;
+}
+.slide-caption {
+  font-size: clamp(12px, 1.3vw, 15px);
+  color: var(--text-muted);
+}
+.big-number {
+  font-family: var(--font-head);
+  font-size: clamp(52px, 9vw, 110px);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+.label-tag {
+  display: inline-block;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--blue-dark);
+  font-size: clamp(11px, 1.1vw, 13px);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 6px 16px;
+  border-radius: 100px;
+}
+
+/* ========== DIVIDER ========== */
+.divider {
+  width: clamp(48px, 6vw, 72px);
+  height: 3px;
+  background: var(--gradient);
+  border-radius: 2px;
+  margin: 0 auto;
+}
+
+/* ========== LOGO ========== */
+.logo-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.logo-img {
+  height: clamp(36px, 5vh, 56px);
+  object-fit: contain;
+}
+.logo-placeholder {
+  height: clamp(36px, 5vh, 56px);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface-2);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 8px 18px;
+}
+.logo-placeholder .dot {
+  width: 22px; height: 22px;
+  background: var(--gradient);
+  border-radius: 50%;
+}
+.logo-placeholder span {
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: clamp(14px,1.8vw,18px);
+  color: var(--blue-dark);
+}
+
+/* ========== CARDS ========== */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: clamp(18px,2.5vh,28px) clamp(20px,2.5vw,32px);
+  box-shadow: var(--shadow);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+
+.card-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(12px, 2vw, 24px);
+  width: 100%;
+}
+.card-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: clamp(14px, 2.5vw, 28px);
+  width: 100%;
+}
+
+.card-icon {
+  font-size: clamp(24px, 3.5vw, 40px);
+  margin-bottom: 10px;
+  display: block;
+}
+.card-title {
+  font-family: var(--font-head);
+  font-size: clamp(14px, 1.8vw, 20px);
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 6px;
+}
+.card-body {
+  font-size: clamp(12px, 1.4vw, 16px);
+  color: var(--text-body);
+  line-height: 1.55;
+}
+
+/* ========== KPI STAT CARDS ========== */
+.stat-num {
+  font-family: var(--font-head);
+  font-size: clamp(30px, 5vw, 60px);
+  font-weight: 800;
+  line-height: 1;
+  display: block;
+  margin-bottom: 6px;
+}
+.stat-label {
+  font-size: clamp(12px, 1.4vw, 16px);
+  color: var(--text-body);
+  line-height: 1.4;
+}
+
+/* ========== PAIN LIST ========== */
+.pain-list {
+  list-style: none;
+  width: 100%;
+  max-width: 700px;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(8px, 1.5vh, 16px);
+  text-align: left;
+}
+.pain-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  font-size: clamp(14px, 1.8vw, 20px);
+  color: var(--text-body);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: clamp(10px,1.5vh,16px) clamp(14px,2vw,22px);
+}
+.pain-list li .icon {
+  font-size: clamp(18px, 2.2vw, 24px);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.pain-list li strong { color: var(--blue-dark); }
+
+/* ========== BEFORE / AFTER TABLE ========== */
+.compare-wrap {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(14px, 2vw, 28px);
+  width: 100%;
+}
+.compare-col {
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.compare-header {
+  padding: clamp(10px,1.5vh,16px) clamp(16px,2vw,24px);
+  font-family: var(--font-head);
+  font-size: clamp(14px, 1.8vw, 20px);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.compare-header.before { background: rgba(239,68,68,0.10); color: #b91c1c; border: 1.5px solid rgba(239,68,68,0.20); }
+.compare-header.after  { background: rgba(75,156,211,0.10); color: var(--blue-dark); border: 1.5px solid var(--border); }
+.compare-items { 
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: none;
+}
+.compare-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: clamp(8px,1.2vh,14px) clamp(14px,2vw,22px);
+  border-bottom: 1px solid rgba(75,156,211,0.08);
+  font-size: clamp(12px, 1.5vw, 17px);
+  color: var(--text-body);
+}
+.compare-item:last-child { border-bottom: none; }
+.compare-item .bullet-before { color: #ef4444; font-size: 18px; }
+.compare-item .bullet-after  { color: var(--blue); font-size: 18px; }
+
+/* ========== HOW IT WORKS STEPS ========== */
+.steps-list {
+  list-style: none;
+  width: 100%;
+  max-width: 680px;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(8px,1.4vh,14px);
+}
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: clamp(10px,1.5vh,16px) clamp(16px,2vw,24px);
+  font-size: clamp(13px, 1.7vw, 19px);
+  color: var(--text-body);
+  text-align: left;
+}
+.step-num {
+  min-width: clamp(28px,3.5vw,40px);
+  height: clamp(28px,3.5vw,40px);
+  background: var(--gradient);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: clamp(12px,1.5vw,16px);
+  color: white;
+  flex-shrink: 0;
+}
+.step-item strong { color: var(--blue-dark); }
+
+/* ========== THANK YOU ACCENT ========== */
+.ty-circle {
+  width: clamp(80px, 12vw, 140px);
+  height: clamp(80px, 12vw, 140px);
+  border-radius: 50%;
+  background: var(--gradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(32px, 5vw, 60px);
+  box-shadow: 0 8px 40px rgba(75,156,211,0.35);
+  margin: 0 auto;
+}
+
+/* ========== SLIDE PROGRESS BAR ========== */
+.progress-bar {
+  position: fixed;
+  bottom: 0; left: 0;
+  height: 3px;
+  background: var(--gradient);
+  transition: width 0.4s ease;
+  z-index: 100;
+  border-radius: 0 2px 0 0;
+}
+
+/* ========== NAV CONTROLS ========== */
+.nav-controls {
+  position: fixed;
+  bottom: 24px;
+  right: 28px;
+  display: flex;
+  gap: 10px;
+  z-index: 100;
+}
+.nav-btn {
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(75,156,211,0.15);
+  transition: all 0.2s;
+  color: var(--blue-dark);
+}
+.nav-btn:hover { background: var(--blue); color: white; border-color: var(--blue); transform: scale(1.06); }
+
+/* ========== SLIDE COUNTER ========== */
+.slide-counter {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+  z-index: 100;
+  letter-spacing: 0.06em;
+}
+
+/* ========== PART BADGE ========== */
+.part-badge {
+  display: inline-block;
+  background: var(--gradient);
+  color: white;
+  font-size: clamp(10px, 1.1vw, 13px);
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  padding: 5px 16px;
+  border-radius: 100px;
+  margin-bottom: 4px;
+}
+
+/* ========== FRAGMENT REVEAL ========== */
+.frag, .frag-scale {
+  opacity: 0;
+  transition: opacity 0.45s ease, transform 0.45s ease;
+}
+.frag        { transform: translateY(14px); }
+.frag-scale  { transform: scale(0.93); }
+.frag.visible, .frag-scale.visible { opacity: 1; transform: none; }
+
+/* ========== LINK CTA ========== */
+.link-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--gradient);
+  color: white;
+  font-family: var(--font-head);
+  font-size: clamp(13px, 1.5vw, 17px);
+  font-weight: 600;
+  padding: clamp(10px,1.5vh,14px) clamp(20px,2.5vw,32px);
+  border-radius: 100px;
+  text-decoration: none;
+  box-shadow: 0 4px 24px rgba(75,156,211,0.30);
+  transition: transform 0.2s, box-shadow 0.2s;
+  border: none;
+  cursor: pointer;
+  letter-spacing: 0.01em;
+}
+.link-cta:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(75,156,211,0.40); }
+
+/* ========== MISSED FUNDING HIGHLIGHT ========== */
+.highlight-box {
+  background: rgba(75,156,211,0.07);
+  border: 1.5px solid var(--border);
+  border-left: 4px solid var(--blue);
+  border-radius: 12px;
+  padding: clamp(12px,2vh,20px) clamp(16px,2.5vw,28px);
+  text-align: left;
+  max-width: 680px;
+  width: 100%;
+}
+.highlight-box p {
+  font-size: clamp(13px, 1.6vw, 18px);
+  color: var(--text-body);
+  line-height: 1.6;
+}
+.highlight-box strong { color: var(--blue-dark); }
+
+/* ========== FOOTER LINE ========== */
+.slide-footer {
+  position: absolute;
+  bottom: clamp(14px,2.5vh,22px);
+  left: 0; right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 clamp(28px,4vw,60px);
+  z-index: 2;
+}
+.footer-logo-text {
+  font-size: clamp(10px,1.1vw,12px);
+  color: var(--text-muted);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+.footer-line {
+  width: 48px;
+  height: 1.5px;
+  background: var(--border);
+  border-radius: 1px;
+}
+
+</style>
+</head>
+<body>
+
+<div class="deck" id="deck">
+
+  <!-- ================================================
+       SLIDE 1 — MAIN / TITLE
+  ================================================= -->
+  <div class="slide active" data-slide="1">
+    <div class="slide-content">
+
+      <!-- Logo -->
+      <div class="logo-wrap">
+        <!-- Swap src below to your maryhouse.jpeg once available -->
+        <img src="maryhouse.jpeg" class="logo-img"
+             onerror="this.style.display='none'; document.getElementById('logo-fallback').style.display='flex';"
+             alt="Mary's House Services logo">
+        <div id="logo-fallback" class="logo-placeholder" style="display:none;">
+          <div class="dot"></div>
+          <span>Mary's House Services</span>
+        </div>
+      </div>
+
+      <div class="divider" style="margin-top:4px;"></div>
+
+      <h1 class="slide-title" style="margin-top:10px;">
+        <span class="grad">Funding Opportunity </span><br>Finder
+      </h1>
+
+      <p class="slide-subtitle" style="max-width:600px;">
+        AI-powered grant discovery, eligibility checking,<br>
+        and application drafting — built for Mary's House.
+      </p>
+
+      <div style="display:flex; gap:14px; flex-wrap:wrap; justify-content:center; margin-top:8px;">
+        <span class="label-tag">🏠 Domestic Violence Support</span>
+        <span class="label-tag">🤖 AI-Powered</span>
+        <span class="label-tag">🇦🇺 Australian NFP</span>
+      </div>
+
+    </div>
+    <div class="slide-footer">
+      <span class="footer-logo-text">Mary's House Services — Hackathon 2026</span>
+      <div class="footer-line"></div>
+      <span class="footer-logo-text">maryshouse.org.au</span>
+    </div>
+  </div>
+
+
+  <!-- ================================================
+       SLIDE 2 — PART 1: THE PROBLEM
+  ================================================= -->
+  <div class="slide" data-slide="2">
+    <div class="slide-content">
+      <div class="part-badge frag">Part 1 — The Problem</div>
+
+      <h2 class="slide-title frag">
+        <span class="grad">Funding exists.</span><br>
+        <span style="color:var(--text-dark);">Time doesn't.</span>
+      </h2>
+
+      <ul class="pain-list">
+        <li class="frag">
+          <span class="icon">🕐</span>
+          <span><strong>10+ hours every week</strong> searching for grants manually — trawling ACNC, government portals, foundation websites.</span>
+        </li>
+        <li class="frag">
+          <span class="icon">✍️</span>
+          <span><strong>Up to 100 hours</strong> writing each application from scratch, inconsistently.</span>
+        </li>
+        <li class="frag">
+          <span class="icon">💸</span>
+          <span><strong>Real funding opportunities are being missed</strong> — not because grants don't exist, but because there's not enough time to find and apply.</span>
+        </li>
+      </ul>
+
+    </div>
+    <div class="slide-footer">
+      <span class="footer-logo-text">Mary's House Services</span>
+      <div class="footer-line"></div>
+      <span class="footer-logo-text">1 / 5</span>
+    </div>
+  </div>
+
+
+  <!-- ================================================
+       SLIDE 3 — PART 2: THE SOLUTION
+  ================================================= -->
+  <div class="slide" data-slide="3">
+    <div class="slide-content">
+      <div class="part-badge frag">Part 2 — The Solution</div>
+
+      <h2 class="slide-title frag">
+        An <span class="grad">AI platform</span><br>that works while<br>you focus on people.
+      </h2>
+
+      <div class="card-grid-3" style="margin-top:4px;">
+        <div class="card frag-scale" style="text-align:center;">
+          <span class="card-icon">🔍</span>
+          <div class="card-title">Finds Grants</div>
+          <div class="card-body">Automatically searches Australian portals, foundations, and corporate programs.</div>
+        </div>
+        <div class="card frag-scale" style="text-align:center;">
+          <span class="card-icon">✅</span>
+          <div class="card-title">Checks Eligibility</div>
+          <div class="card-body">Cross-references grant criteria against Mary's House profile instantly.</div>
+        </div>
+        <div class="card frag-scale" style="text-align:center;">
+          <span class="card-icon">📝</span>
+          <div class="card-title">Drafts Applications</div>
+          <div class="card-body">Generates structured draft applications in minutes — ready for human review.</div>
+        </div>
+      </div>
+
+      <p class="slide-caption frag" style="margin-top:6px;">
+        More fundraising capacity — without increasing headcount.
+      </p>
+
+    </div>
+    <div class="slide-footer">
+      <span class="footer-logo-text">Mary's House Services</span>
+      <div class="footer-line"></div>
+      <span class="footer-logo-text">2 / 5</span>
+    </div>
+  </div>
+
+
+  <!-- ================================================
+       SLIDE 4 — PART 3: HOW IT WORKS
+  ================================================= -->
+  <div class="slide" data-slide="4">
+    <div class="slide-content">
+      <div class="part-badge frag">Part 3 — How It Works</div>
+
+      <h2 class="slide-title frag">
+        <span class="grad">Live walkthrough</span>
+      </h2>
+
+      <ol class="steps-list">
+        <li class="step-item frag">
+          <div class="step-num">1</div>
+          <span><strong>Search funding opportunities</strong> — AI scans Australian grant portals, foundations, and corporate CSR programs.</span>
+        </li>
+        <li class="step-item frag">
+          <div class="step-num">2</div>
+          <span><strong>Filter by grant type</strong> — narrow by funders, funding size, or deadline window.</span>
+        </li>
+        <li class="step-item frag">
+          <div class="step-num">3</div>
+          <span><strong>View ranked opportunities</strong> — a scored prospect report with Fit Score, deadline, and funder details.</span>
+        </li>
+        <li class="step-item frag">
+          <div class="step-num">4</div>
+          <span><strong>Open source links instantly</strong> — every result is verified and linked; nothing is invented.</span>
+        </li>
+        <li class="step-item frag">
+          <div class="step-num">5</div>
+          <span><strong>Generate AI draft applications</strong> — one click to a full structured draft, pre-filled from Mary's House's profile.</span>
+        </li>
+      </ol>
+
+      <!-- Placeholder for live demo link -->
+      <a href="localhost:5173" class="link-cta frag" style="margin-top:10px;" id="demo-link">
+        🔗 View Live Demo &nbsp;
+      </a>
+
+    </div>
+    <div class="slide-footer">
+      <span class="footer-logo-text">Mary's House Services</span>
+      <div class="footer-line"></div>
+      <span class="footer-logo-text">3 / 5</span>
+    </div>
+  </div>
+
+
+  <!-- ================================================
+       SLIDE 5 — PART 4: BEFORE vs AFTER
+  ================================================= -->
+  <div class="slide" data-slide="5">
+    <div class="slide-content">
+      <div class="part-badge frag">Part 4 — What It Improves</div>
+
+      <h2 class="slide-title frag" style="font-size:clamp(22px,4vw,48px); margin-bottom:4px;">
+        From <span style="color:#ef4444;">exhausted</span> to <span class="grad">empowered.</span>
+      </h2>
+
+      <div class="compare-wrap frag" style="margin-top:4px;">
+        <!-- BEFORE -->
+        <div class="compare-col">
+          <div class="compare-header before">
+            <span>❌</span> Before
+          </div>
+          <div class="compare-items">
+            <div class="compare-item"><span class="bullet-before">✗</span> Manual searching — hours every week</div>
+            <div class="compare-item"><span class="bullet-before">✗</span> Manual eligibility checks — guesswork</div>
+            <div class="compare-item"><span class="bullet-before">✗</span> Writing applications from scratch</div>
+            <div class="compare-item"><span class="bullet-before">✗</span> Missed deadlines due to lack of time</div>
+          </div>
+        </div>
+        <!-- AFTER -->
+        <div class="compare-col">
+          <div class="compare-header after">
+            <span>✅</span> After
+          </div>
+          <div class="compare-items">
+            <div class="compare-item"><span class="bullet-after">✓</span> <strong>Ranked prospects in seconds</strong></div>
+            <div class="compare-item"><span class="bullet-after">✓</span> <strong>Eligibility checked automatically</strong></div>
+            <div class="compare-item"><span class="bullet-after">✓</span> <strong>Drafts generated instantly</strong></div>
+            <div class="compare-item"><span class="bullet-after">✓</span> <strong>More time focused on helping people</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="highlight-box frag" style="margin-top:10px;">
+        <p>We didn't replace the fundraiser — <strong>we gave them their time back</strong> so they can focus on relationships, strategy, and the people who need them most.</p>
+      </div>
+
+    </div>
+    <div class="slide-footer">
+      <span class="footer-logo-text">Mary's House Services</span>
+      <div class="footer-line"></div>
+      <span class="footer-logo-text">4 / 5</span>
+    </div>
+  </div>
+
+
+  <!-- ================================================
+       SLIDE 6 — THANK YOU
+  ================================================= -->
+  <div class="slide" data-slide="6">
+    <div class="slide-content">
+
+      <div class="ty-circle frag">🏠</div>
+
+      <h2 class="slide-title frag" style="margin-top:12px;">
+        <span class="grad">Thank You.</span>
+      </h2>
+
+      <p class="slide-subtitle frag" style="max-width:560px;">
+        Built for the women and children of Mary's House Services — because every hour saved in admin is an hour gained for the people who need it most.
+      </p>
+
+      <div class="divider frag" style="margin-top:4px;"></div>
+
+      <!-- Logo again on closing slide -->
+      <div class="frag" style="margin-top:10px;">
+        <img src="maryhouse.jpeg" class="logo-img" style="height:clamp(28px,4vh,48px);"
+             onerror="this.style.display='none'; document.getElementById('ty-logo-fallback').style.display='flex';"
+             alt="Mary's House Services">
+        <div id="ty-logo-fallback" class="logo-placeholder" style="display:none; justify-content:center;">
+          <div class="dot"></div>
+          <span>Mary's House Services</span>
+        </div>
+      </div>
+
+      <div class="frag" style="display:flex; gap:14px; flex-wrap:wrap; justify-content:center; margin-top:6px;">
+        <span class="label-tag">maryshouse.org.au</span>
+        <span class="label-tag">Hackathon 2026</span>
+      </div>
+
+    </div>
+    <div class="slide-footer">
+      <span class="footer-logo-text">Mary's House Services</span>
+      <div class="footer-line"></div>
+      <span class="footer-logo-text">5 / 5</span>
+    </div>
+  </div>
+
+</div><!-- /deck -->
+
+<!-- ========== PROGRESS BAR ========== -->
+<div class="progress-bar" id="progress"></div>
+
+<!-- ========== SLIDE COUNTER ========== -->
+<div class="slide-counter" id="counter">1 / 6</div>
+
+<!-- ========== NAV BUTTONS ========== -->
+<div class="nav-controls">
+  <button class="nav-btn" id="prevBtn" title="Previous (←)">‹</button>
+  <button class="nav-btn" id="nextBtn" title="Next (→)">›</button>
+</div>
+
+
+<!-- ========== NAVIGATION SCRIPT ========== -->
+<script>
+const slides   = document.querySelectorAll('.slide');
+const progress = document.getElementById('progress');
+const counter  = document.getElementById('counter');
+const total    = slides.length;
+let   current  = 0;
+
+// Fragment tracking per slide
+const fragState = Array.from({ length: total }, () => -1);
+
+function getFrags(slideEl) {
+  return slideEl.querySelectorAll('.frag, .frag-scale');
+}
+
+function updateUI() {
+  progress.style.width = `${((current + 1) / total) * 100}%`;
+  counter.textContent  = `${current + 1} / ${total}`;
+}
+
+function goTo(idx) {
+  if (idx < 0 || idx >= total) return;
+  slides[current].classList.remove('active');
+  current = idx;
+  slides[current].classList.add('active');
+
+  // Reset frags if going backwards to this slide
+  getFrags(slides[current]).forEach(f => f.classList.remove('visible'));
+  fragState[current] = -1;
+  updateUI();
+}
+
+function advanceOrNext() {
+  const frags = getFrags(slides[current]);
+  const next  = fragState[current] + 1;
+  if (next < frags.length) {
+    frags[next].classList.add('visible');
+    fragState[current] = next;
+  } else {
+    if (current < total - 1) goTo(current + 1);
+  }
+}
+
+function retreatOrPrev() {
+  const frags = getFrags(slides[current]);
+  if (fragState[current] >= 0) {
+    frags[fragState[current]].classList.remove('visible');
+    fragState[current]--;
+  } else {
+    if (current > 0) {
+      goTo(current - 1);
+      // show all frags of previous slide so retreating feels natural
+      const prevFrags = getFrags(slides[current]);
+      prevFrags.forEach(f => f.classList.add('visible'));
+      fragState[current] = prevFrags.length - 1;
+    }
+  }
+}
+
+document.getElementById('nextBtn').addEventListener('click', advanceOrNext);
+document.getElementById('prevBtn').addEventListener('click', retreatOrPrev);
+
+document.addEventListener('keydown', e => {
+  if (['ArrowRight', 'Space', 'PageDown'].includes(e.key)) { e.preventDefault(); advanceOrNext(); }
+  if (['ArrowLeft',  'Backspace', 'PageUp'].includes(e.key)) { e.preventDefault(); retreatOrPrev(); }
+});
+
+// Touch swipe
+let touchX = 0;
+document.addEventListener('touchstart', e => { touchX = e.touches[0].clientX; });
+document.addEventListener('touchend',   e => {
+  const dx = e.changedTouches[0].clientX - touchX;
+  if (Math.abs(dx) > 50) dx < 0 ? advanceOrNext() : retreatOrPrev();
+});
+
+// Initialise first slide frags (title slide has none, so this is a no-op)
+updateUI();
+</script>
+
+</body>
+</html>

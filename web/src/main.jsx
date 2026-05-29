@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard.jsx';
 import GrantDetail from './pages/GrantDetail.jsx';
 import Sources from './pages/Sources.jsx';
 import Eligibility from './pages/Eligibility.jsx';
+import About from './pages/About.jsx';
 import './styles/app.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
@@ -16,6 +17,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <Route path="grants/:id" element={<GrantDetail />} />
         <Route path="sources" element={<Sources />} />
         <Route path="eligibility" element={<Eligibility />} />
+        <Route path="about" element={<About />} />
       </Route>
     </Routes>
   </BrowserRouter>,

@@ -8,7 +8,6 @@ export default function GrantPanel({ grantId }) {
   const [drafts, setDrafts] = useState([]);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState(null);
-  const [copyMsg, setCopyMsg] = useState(null);
 
   useEffect(() => {
     setGrant(null);
@@ -39,17 +38,6 @@ export default function GrantPanel({ grantId }) {
       setError(e.message);
     } finally {
       setGenerating(false);
-    }
-  }
-
-  async function handleCopy(content) {
-    try {
-      await navigator.clipboard.writeText(content);
-      setCopyMsg('Copied!');
-      setTimeout(() => setCopyMsg(null), 2000);
-    } catch {
-      setCopyMsg('Failed');
-      setTimeout(() => setCopyMsg(null), 2000);
     }
   }
 
@@ -105,10 +93,13 @@ export default function GrantPanel({ grantId }) {
           <span className="dot">·</span>
           <span className={`pill pill-${grant.status}`}>{grant.status.replace('_', ' ')}</span>
         </div>
+        {grant.description && (
+          <p className="panel-description">{grant.description}</p>
+        )}
       </div>
 
-      {/* ── Key stats ── */}
-      <div className="panel-stats">
+      {/* ── Key stats (Funding + Deadline) ── */}
+      <div className="panel-stats panel-stats-2">
         <div className="panel-stat">
           <h3>Funding Range</h3>
           <div className="panel-stat-val" style={{ fontSize: 16 }}>{fmtAmount(grant)}</div>
@@ -125,7 +116,11 @@ export default function GrantPanel({ grantId }) {
             </div>
           )}
         </div>
-        <div className="panel-stat" style={{ borderColor: `${color}55` }}>
+      </div>
+
+      {/* ── Score row: AI Fit Score (left) + Sub-score breakdown (right) ── */}
+      <div className="score-row">
+        <div className="glass-block fit-score-block" style={{ borderColor: `${color}55` }}>
           <h3>AI Fit Score</h3>
           <div className="big-score-val" style={{ color }}>
             {grant.score ?? '—'}
@@ -135,28 +130,20 @@ export default function GrantPanel({ grantId }) {
             <div className="score-rationale">💡 {grant.score_rationale}</div>
           )}
         </div>
-      </div>
-
-      {/* ── Sub-score breakdown ── */}
-      <div className="glass-block">
-        <h3>Score Breakdown</h3>
-        <SubScoreRadar grant={grant} />
-        <p className="sub-scores-note">
-          Final score weights — Mission 35% · Eligibility 25% · Funding 15% · Win 15% · Timing 10%.
-          Eligibility acts as a gate: a low eligibility score caps the final.
-        </p>
+        <div className="glass-block">
+          <h3>Score Breakdown</h3>
+          <SubScoreRadar grant={grant} />
+          <p className="sub-scores-note">
+            Final score weights — Mission 35% · Eligibility 25% · Funding 15% · Win 15% · Timing 10%.
+            Eligibility acts as a gate: a low eligibility score caps the final.
+          </p>
+        </div>
       </div>
 
       {/* ── Eligibility ── */}
       <div className="glass-block">
         <h3>Eligibility</h3>
         <p>{grant.eligibility || 'No eligibility information available.'}</p>
-      </div>
-
-      {/* ── Description ── */}
-      <div className="glass-block">
-        <h3>Description</h3>
-        <p>{grant.description || 'No description available.'}</p>
       </div>
 
       {/* ── Source ── */}
@@ -178,14 +165,9 @@ export default function GrantPanel({ grantId }) {
           <h3 style={{ margin: 0 }}>Draft Application</h3>
           <div className="draft-actions">
             {drafts.length > 0 && (
-              <>
-                <button className="btn-secondary" onClick={() => handleCopy(drafts[0].content)}>
-                  {copyMsg ?? '📋 Copy'}
-                </button>
-                <button className="btn-secondary" onClick={() => handleDownload(drafts[0])}>
-                  📥 .docx
-                </button>
-              </>
+              <button className="btn-secondary" onClick={() => handleDownload(drafts[0])}>
+                📥 .docx
+              </button>
             )}
             <button className="btn-primary" onClick={handleGenerate} disabled={generating}>
               {generating
@@ -204,14 +186,11 @@ export default function GrantPanel({ grantId }) {
           </p>
         )}
 
-        {drafts.map(d => (
-          <div key={d.id} className="draft-article">
-            <div className="draft-meta">
-              Generated {new Date(d.created_at).toLocaleString()} · {d.model}
-            </div>
-            <pre className="draft-content">{d.content}</pre>
+        {drafts.length > 0 && (
+          <div className="draft-meta">
+            Latest draft generated {new Date(drafts[0].created_at).toLocaleString()} · {drafts[0].model}
           </div>
-        ))}
+        )}
       </div>
     </div>
   );
