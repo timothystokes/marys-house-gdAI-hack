@@ -300,7 +300,7 @@ export async function crawlSource(source, { onProgress } = {}) {
           const grant = extractGrant($, row.url);
           if (grant) {
             // Pull richer text from the cleaned DOM for assessment.
-            const fullText = cleanPageText($).slice(0, 14000);
+            const fullText = cleanPageText($).slice(0, 6000);
 
             // Look for linked guideline PDFs on the same origin and pull their text.
             let pdfText = '';

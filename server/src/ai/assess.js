@@ -168,9 +168,9 @@ export function computeFinalScore({ mission_fit, eligibility_fit, funding_value,
  * @returns {Promise<null | object>}
  */
 export async function assessOpportunity({ pageText, url, sourceName, pdfText, hints = {} }) {
-  const trimmed = (pageText || '').replace(/\s+/g, ' ').trim().slice(0, 12000);
+  const trimmed = (pageText || '').replace(/\s+/g, ' ').trim().slice(0, 6000);
   if (!trimmed) return null;
-  const trimmedPdf = pdfText ? pdfText.replace(/\s+/g, ' ').trim().slice(0, 12000) : '';
+  const trimmedPdf = pdfText ? pdfText.replace(/\s+/g, ' ').trim().slice(0, 4000) : '';
 
   const hintBlock = [
     hints.title ? `Suggested title: ${hints.title}` : null,
