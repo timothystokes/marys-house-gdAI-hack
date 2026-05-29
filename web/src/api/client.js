@@ -29,6 +29,31 @@ export const api = {
   drafts: {
     create: (grantId) => req(`/drafts/${grantId}`, { method: 'POST' }),
     listForGrant: (grantId) => req(`/drafts/grant/${grantId}`),
+    // Generate a fresh draft and download it as .docx in one round-trip.
+    // Returns { blob, filename } so the caller can trigger the browser save.
+    generateAndDownload: async (grantId) => {
+      const res = await fetch(`${base}/drafts/${grantId}/docx`, { method: 'POST' });
+      if (!res.ok) {
+        let msg = `${res.status} ${res.statusText}`;
+        try { const j = await res.json(); if (j?.error) msg = j.error; } catch { /* noop */ }
+        throw new Error(msg);
+      }
+      const blob = await res.blob();
+      const cd = res.headers.get('content-disposition') || '';
+      const m = cd.match(/filename="([^"]+)"/);
+      const filename = m ? decodeURIComponent(m[1]) : 'Grant Application - Draft.docx';
+      return { blob, filename, draftId: res.headers.get('x-draft-id'), model: res.headers.get('x-model') };
+    },
+    // Download an already-generated draft as .docx (no AI call).
+    downloadDocx: async (draftId) => {
+      const res = await fetch(`${base}/drafts/${draftId}/docx`);
+      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+      const blob = await res.blob();
+      const cd = res.headers.get('content-disposition') || '';
+      const m = cd.match(/filename="([^"]+)"/);
+      const filename = m ? decodeURIComponent(m[1]) : 'Grant Application - Draft.docx';
+      return { blob, filename };
+    },
   },
   eligibility: {
     get: () => req('/eligibility'),

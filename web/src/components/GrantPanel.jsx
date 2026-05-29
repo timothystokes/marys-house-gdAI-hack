@@ -22,8 +22,19 @@ export default function GrantPanel({ grantId }) {
     setGenerating(true);
     setError(null);
     try {
-      const draft = await api.drafts.create(grantId);
-      setDrafts(prev => [draft, ...prev]);
+      const { blob, filename, draftId } = await api.drafts.generateAndDownload(grantId);
+      // Trigger browser download
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      // Refresh the drafts list so the new entry shows up
+      const refreshed = await api.drafts.listForGrant(grantId);
+      setDrafts(refreshed);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -42,15 +53,20 @@ export default function GrantPanel({ grantId }) {
     }
   }
 
-  function handleDownload(draft) {
-    const filename = `draft-${grant?.title?.slice(0, 30).replace(/\s+/g, '-') ?? grantId}.txt`;
-    const blob = new Blob([draft.content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
+  async function handleDownload(draft) {
+    try {
+      const { blob, filename } = await api.drafts.downloadDocx(draft.id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(`Download failed: ${e.message}`);
+    }
   }
 
   if (!grant && !error) {
@@ -167,14 +183,14 @@ export default function GrantPanel({ grantId }) {
                   {copyMsg ?? '📋 Copy'}
                 </button>
                 <button className="btn-secondary" onClick={() => handleDownload(drafts[0])}>
-                  📥 .txt
+                  📥 .docx
                 </button>
               </>
             )}
             <button className="btn-primary" onClick={handleGenerate} disabled={generating}>
               {generating
-                ? <><span className="spinner" /> Generating…</>
-                : drafts.length ? '🔄 Regenerate' : '✨ Generate Draft'
+                ? <><span className="spinner" /> Generating &amp; downloading…</>
+                : drafts.length ? '🔄 Regenerate &amp; Download' : '✨ Generate Draft (.docx)'
               }
             </button>
           </div>

@@ -43,17 +43,25 @@ async function gatedFetch(body) {
       // Retry on 429 (rate limit) and 5xx with exponential backoff.
       if (res.status === 429 || res.status >= 500) {
         const text = await res.text();
-        // Try to honour Retry-After (seconds) or X-RateLimit-Reset (seconds).
+        // Retry-After is seconds (per RFC). x-ratelimit-reset on GitHub Models
+        // can be either seconds-until-reset OR an absolute Unix epoch — the
+        // latter (e.g. for daily quotas) gives nonsensical multi-hour waits, so
+        // we always cap below.
         const ra = Number(res.headers.get('retry-after')) || 0;
-        const xResetMs = (() => {
-          const x = res.headers.get('x-ratelimit-timeremaining') || res.headers.get('x-ratelimit-reset');
-          const n = Number(x);
-          return Number.isFinite(n) ? n * 1000 : 0;
-        })();
-        // Also parse "Please wait NN seconds" from the message body if present.
+        const xReset = Number(res.headers.get('x-ratelimit-timeremaining') || res.headers.get('x-ratelimit-reset')) || 0;
+        // If it looks like an epoch (>1e9 ≈ year 2001+), convert to "from now".
+        const xResetSec = xReset > 1e9 ? Math.max(0, xReset - Math.floor(Date.now() / 1000)) : xReset;
         const fromBody = (text.match(/wait\s+(\d+)\s+second/i) || [])[1];
-        const bodyMs = fromBody ? Number(fromBody) * 1000 : 0;
-        const backoff = Math.max(ra * 1000, xResetMs, bodyMs, 2_000 * Math.pow(2, attempt));
+        const bodySec = fromBody ? Number(fromBody) : 0;
+        const suggested = Math.max(ra, xResetSec, bodySec) * 1000;
+        const expBackoff = 2_000 * Math.pow(2, attempt);
+        const MAX_BACKOFF_MS = 60_000; // never wait more than a minute between attempts
+        // If the server says "come back in many minutes", give up immediately —
+        // daily-quota waits are useless for an interactive request.
+        if (suggested > MAX_BACKOFF_MS) {
+          throw new Error(`GitHub Models ${res.status}: rate-limited for ${Math.round(suggested/1000)}s — giving up (likely daily quota). Body: ${text.slice(0,200)}`);
+        }
+        const backoff = Math.min(MAX_BACKOFF_MS, Math.max(suggested, expBackoff));
         if (attempt < MAX_RETRIES) {
           console.warn(`[ai] ${res.status} — retrying in ${Math.round(backoff/1000)}s (attempt ${attempt+1}/${MAX_RETRIES})`);
           await sleep(backoff);
