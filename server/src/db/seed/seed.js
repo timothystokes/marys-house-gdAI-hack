@@ -1,0 +1,203 @@
+import { initDb, db } from '../db.js';
+
+initDb();
+
+console.log('[seed] clearing existing data...');
+db.exec('DELETE FROM drafts; DELETE FROM grants; DELETE FROM sources;');
+
+const sources = [
+  { name: 'GrantConnect (Federal)', url: 'https://www.grants.gov.au/' },
+  { name: 'Philanthropy Australia', url: 'https://www.philanthropy.org.au/' },
+  { name: 'Our Community — Funding Centre', url: 'https://www.fundingcentre.com.au/' },
+  { name: 'NSW Government Grants', url: 'https://www.nsw.gov.au/grants-and-funding' },
+  { name: 'Paul Ramsay Foundation', url: 'https://www.paulramsayfoundation.org.au/' },
+  { name: 'Vincent Fairfax Family Foundation', url: 'https://www.vfff.org.au/' },
+];
+
+const insertSource = db.prepare("INSERT INTO sources (name, url, enabled, last_crawled_at) VALUES (?, ?, 1, datetime('now', '-1 day'))");
+const sourceIds = sources.map(s => insertSource.run(s.name, s.url).lastInsertRowid);
+
+const grants = [
+  {
+    source_id: sourceIds[0],
+    title: 'Safe Places Emergency Accommodation — Round 3',
+    funder: 'Department of Social Services',
+    funder_type: 'government',
+    amount_min: 250000, amount_max: 2500000, currency: 'AUD',
+    deadline: '2026-07-15',
+    eligibility: 'Registered DFV service providers with refuge operations in Australia.',
+    description: 'Capital and operational funding to expand emergency accommodation for women and children experiencing domestic and family violence. Priority given to trauma-informed services with established outreach capability.',
+    source_url: 'https://www.grants.gov.au/Go/Show?GoUuid=safe-places-r3',
+    score: 96,
+    score_rationale: 'Bullseye fit: federal DFV refuge funding directly aligned with Mary\'s House core service delivery and high $ ceiling.',
+    status: 'open',
+  },
+  {
+    source_id: sourceIds[4],
+    title: 'Pathways out of Disadvantage — Multi-Year Operating Support',
+    funder: 'Paul Ramsay Foundation',
+    funder_type: 'philanthropic',
+    amount_min: 500000, amount_max: 3000000, currency: 'AUD',
+    deadline: '2026-06-30',
+    eligibility: 'Australian charities (DGR-1) addressing root causes of disadvantage; multi-year commitments preferred.',
+    description: 'Unrestricted, multi-year operating funding for organisations tackling cycles of disadvantage including domestic violence, homelessness, and children\'s trauma recovery.',
+    source_url: 'https://www.paulramsayfoundation.org.au/our-work/pathways',
+    score: 93,
+    score_rationale: 'Multi-year operating funding is rare and ideal; explicit DV and children\'s trauma focus aligns precisely with Mary\'s House programs.',
+    status: 'open',
+  },
+  {
+    source_id: sourceIds[3],
+    title: 'NSW Women\'s Safety Grants Program 2026',
+    funder: 'NSW Department of Communities and Justice',
+    funder_type: 'government',
+    amount_min: 50000, amount_max: 400000, currency: 'AUD',
+    deadline: '2026-06-10',
+    eligibility: 'NSW-based incorporated NFPs delivering women\'s safety programs.',
+    description: 'Funds frontline services, prevention programs and innovation projects that improve safety outcomes for women in NSW.',
+    source_url: 'https://www.nsw.gov.au/grants/womens-safety-2026',
+    score: 91,
+    score_rationale: 'State-level, NSW-targeted women\'s safety stream; strong alignment with Mary\'s House service footprint.',
+    status: 'closing_soon',
+  },
+  {
+    source_id: sourceIds[5],
+    title: 'Children & Young People Wellbeing Grant',
+    funder: 'Vincent Fairfax Family Foundation',
+    funder_type: 'philanthropic',
+    amount_min: 30000, amount_max: 150000, currency: 'AUD',
+    deadline: '2026-08-22',
+    eligibility: 'Australian NFPs delivering trauma-informed children\'s programs.',
+    description: 'Supports therapeutic and developmental programs for children affected by adversity, including those exposed to family violence.',
+    source_url: 'https://www.vfff.org.au/grants/children-wellbeing',
+    score: 87,
+    score_rationale: 'Direct alignment with Mary\'s House children\'s wellbeing program; modest but meaningful amount.',
+    status: 'open',
+  },
+  {
+    source_id: sourceIds[2],
+    title: 'Westpac Foundation Community Grants',
+    funder: 'Westpac Foundation',
+    funder_type: 'corporate',
+    amount_min: 10000, amount_max: 75000, currency: 'AUD',
+    deadline: '2026-07-01',
+    eligibility: 'Australian social enterprises and community organisations.',
+    description: 'Supports organisations creating opportunities for vulnerable Australians, including women re-entering the workforce after experiencing violence.',
+    source_url: 'https://www.fundingcentre.com.au/grant/westpac-community-2026',
+    score: 74,
+    score_rationale: 'Good corporate fit for outreach / employment-pathway projects; smaller dollar value than core operating needs.',
+    status: 'open',
+  },
+  {
+    source_id: sourceIds[1],
+    title: 'Macquarie Group Foundation 50th Anniversary Award',
+    funder: 'Macquarie Group Foundation',
+    funder_type: 'corporate',
+    amount_min: 100000, amount_max: 500000, currency: 'AUD',
+    deadline: '2026-09-30',
+    eligibility: 'Australian charities with bold ideas addressing systemic social issues.',
+    description: 'One-off anniversary grants funding ambitious projects with measurable community impact.',
+    source_url: 'https://www.philanthropy.org.au/grants/macquarie-50',
+    score: 68,
+    score_rationale: 'Competitive but well-funded; would suit a flagship innovation project — needs strong narrative to win.',
+    status: 'open',
+  },
+  {
+    source_id: sourceIds[0],
+    title: 'Indigenous Languages and Arts Program',
+    funder: 'Office for the Arts',
+    funder_type: 'government',
+    amount_min: 20000, amount_max: 300000, currency: 'AUD',
+    deadline: '2026-08-01',
+    eligibility: 'Organisations supporting Indigenous language and arts initiatives.',
+    description: 'Funding for projects that preserve and promote Aboriginal and Torres Strait Islander languages and creative practice.',
+    source_url: 'https://www.grants.gov.au/Go/Show?GoUuid=ilap-2026',
+    score: 22,
+    score_rationale: 'Outside Mary\'s House core remit; only relevant if partnering with Indigenous-led DFV service.',
+    status: 'open',
+  },
+  {
+    source_id: sourceIds[2],
+    title: 'Lord Mayor\'s Charitable Foundation — Affordable Housing',
+    funder: 'Lord Mayor\'s Charitable Foundation',
+    funder_type: 'philanthropic',
+    amount_min: 50000, amount_max: 250000, currency: 'AUD',
+    deadline: '2026-06-05',
+    eligibility: 'Victorian-based projects addressing housing insecurity.',
+    description: 'Funds initiatives tackling housing affordability and homelessness in Victoria.',
+    source_url: 'https://www.fundingcentre.com.au/grant/lmcf-housing',
+    score: 18,
+    score_rationale: 'Strong topical relevance but eligibility limited to Victoria — Mary\'s House operates in NSW.',
+    status: 'closing_soon',
+  },
+  {
+    source_id: sourceIds[1],
+    title: 'Equity Trustees Charitable Foundation — Women & Children',
+    funder: 'Equity Trustees',
+    funder_type: 'philanthropic',
+    amount_min: 20000, amount_max: 120000, currency: 'AUD',
+    deadline: '2026-10-15',
+    eligibility: 'Australian DGR-1 charities supporting women and children.',
+    description: 'Open-themed grants for programs improving outcomes for women and children, including those affected by violence.',
+    source_url: 'https://www.philanthropy.org.au/grants/equity-trustees-wc',
+    score: 84,
+    score_rationale: 'Open theme and direct beneficiary alignment; suitable for case management or children\'s program top-up.',
+    status: 'open',
+  },
+  {
+    source_id: sourceIds[3],
+    title: 'NSW Social Sector Transformation Fund',
+    funder: 'NSW Government',
+    funder_type: 'government',
+    amount_min: 25000, amount_max: 200000, currency: 'AUD',
+    deadline: '2026-05-31',
+    eligibility: 'NSW NFPs investing in digital and operational transformation.',
+    description: 'Co-funds technology, data and capability uplift projects to strengthen NSW community organisations.',
+    source_url: 'https://www.nsw.gov.au/grants/social-sector-transformation',
+    score: 71,
+    score_rationale: 'Great fit for Mary\'s House case-management technology investment; deadline is imminent.',
+    status: 'closing_soon',
+  },
+  {
+    source_id: sourceIds[4],
+    title: 'Early Childhood Trauma Recovery Initiative',
+    funder: 'Paul Ramsay Foundation',
+    funder_type: 'philanthropic',
+    amount_min: 150000, amount_max: 800000, currency: 'AUD',
+    deadline: '2026-11-30',
+    eligibility: 'Organisations delivering evidence-based early childhood trauma programs.',
+    description: 'Multi-year funding for organisations supporting children aged 0-8 recovering from trauma including exposure to family violence.',
+    source_url: 'https://www.paulramsayfoundation.org.au/our-work/ectri',
+    score: 89,
+    score_rationale: 'Excellent alignment with Mary\'s House children\'s wellbeing program; substantial multi-year value.',
+    status: 'open',
+  },
+  {
+    source_id: sourceIds[2],
+    title: 'IMB Bank Community Foundation Grants',
+    funder: 'IMB Bank',
+    funder_type: 'corporate',
+    amount_min: 1000, amount_max: 15000, currency: 'AUD',
+    deadline: '2026-05-20',
+    eligibility: 'Community organisations in NSW Illawarra, South Coast and Sydney regions.',
+    description: 'Small grants supporting local community projects.',
+    source_url: 'https://www.fundingcentre.com.au/grant/imb-community',
+    score: 45,
+    score_rationale: 'Small dollar value but geographically eligible; useful for a specific equipment or program need.',
+    status: 'closed',
+  },
+];
+
+const insertGrant = db.prepare(`
+  INSERT INTO grants (
+    source_id, title, funder, funder_type, amount_min, amount_max, currency,
+    deadline, eligibility, description, source_url, score, score_rationale, status
+  ) VALUES (
+    @source_id, @title, @funder, @funder_type, @amount_min, @amount_max, @currency,
+    @deadline, @eligibility, @description, @source_url, @score, @score_rationale, @status
+  )
+`);
+
+for (const g of grants) insertGrant.run(g);
+
+console.log(`[seed] inserted ${sources.length} sources and ${grants.length} grants.`);

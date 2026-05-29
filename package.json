@@ -1,0 +1,17 @@
+{
+  "name": "marys-house-grant-finder",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI-powered grant discovery for Mary's House",
+  "workspaces": ["server", "web"],
+  "scripts": {
+    "dev": "concurrently -n server,web -c blue,magenta \"npm run dev -w server\" \"npm run dev -w web\"",
+    "dev:server": "npm run dev -w server",
+    "dev:web": "npm run dev -w web",
+    "seed": "npm run seed -w server",
+    "build": "npm run build -w web"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}
