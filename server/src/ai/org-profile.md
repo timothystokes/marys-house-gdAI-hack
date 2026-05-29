@@ -36,23 +36,29 @@ Women and children in the greater Sydney region who have experienced or are at r
 - Single-purpose capital (e.g. medical equipment) unrelated to refuge needs
 
 ## GENERAL ELIGIBILITY
-Australian registered charity
-Hold item 1 Deductible Gift Recipients (DGR1) status
-Has been operating for 10 years
-Have annual revenue of $3.7mill
-No auspice arrangement
+- Australian registered charity
+- Hold item 1 Deductible Gift Recipients (DGR1) status
+- Has been operating for 10 years
+- Have annual revenue of $3.7mill
+- No auspice arrangement
 
-## PROJECT THUMB UP:
-Database maintenance cost
-Software subscription cost
-Caseworker staff salary cost
-Building maintenance cost
-Operational cost
-Project focus area: economic empowerment, health and wellbeing, safety and recovery, gender equality, empower women and girls, homelessness, housing, community welfare, social services, community development
-Pilot program
-Trial project
+## SPECIFICLY ELIGIBLE FOR:
+- Database maintenance cost
+- Software subscription cost
+- Caseworker staff salary cost
+- Building maintenance cost
+- Operational cost
+- Project focus areas: economic empowerment, health and wellbeing, safety and recovery, gender equality, empower women and girls, homelessness, housing, community welfare, social services, community development
+- Pilot programs
+- Trial projects
 
-## THUMB DOWN:
-We are not an indigenous organisation
-Infrastructure and building project
+## NOT ELIGIBLE FOR:
+- Indigenous or First Nations specific opportunities
+- Infrastructure and building projects
+
+## CURRENT PROGECTS
+
+### 
+
+
 

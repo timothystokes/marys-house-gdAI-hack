@@ -71,6 +71,18 @@ Sub-score guidance:
                     USE THIS HONESTLY — if the page says "for universities only" and Mary's House is
                     a DFV service NFP, score this 0 even if mission fit is high.
 
+                    HARD DISQUALIFIERS — if ANY of these match the opportunity's stated eligibility,
+                    you MUST set eligibility_fit = 0 (no exceptions):
+                      * Applicant must be an Aboriginal/Torres Strait Islander/First Nations/
+                        Indigenous-controlled organisation — Mary's House is NOT one.
+                      * Applicant must be a university, research institution, government agency,
+                        individual, sole trader, or for-profit business.
+                      * Applicant must be located outside NSW.
+                      * Check the "NOT ELIGIBLE FOR" section of the organisation profile for the
+                        full canonical list of disqualifiers.
+                    NOTE: An opportunity that funds work BENEFITING First Nations people is fine —
+                    the disqualifier is when the APPLICANT organisation itself must be Indigenous-controlled.
+
   funding_value     100 = $100k+ unrestricted multi-year. 50 = $20-50k single year. 10 = < $5k or in-kind only.
 
   win_likelihood    100 = small targeted round, few likely applicants, strong alignment.

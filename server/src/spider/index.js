@@ -20,17 +20,21 @@ import { db } from '../db/db.js';
 import { startStatus, updateStatus, finishStatus, failStatus, isRunning } from './status.js';
 import { assessOpportunity } from '../ai/assess.js';
 
-// pdf-parse ships as CommonJS and runs a self-test on import in some versions;
-// use createRequire so we only load it when needed and don't trip ESM quirks.
+// pdf-parse v2.x exports a PDFParse class (different from v1's function API).
+// We lazy-load with createRequire so a missing/incompatible install can't crash startup.
 const requireCjs = createRequire(import.meta.url);
-let _pdfParse = null;
+let _pdfParseClass = null;
 function getPdfParser() {
-  if (_pdfParse) return _pdfParse;
-  try { _pdfParse = requireCjs('pdf-parse'); } catch (e) {
-    console.warn('[spider] pdf-parse not available:', e.message);
-    _pdfParse = () => { throw new Error('pdf-parse unavailable'); };
+  if (_pdfParseClass !== null) return _pdfParseClass;
+  try {
+    const mod = requireCjs('pdf-parse');
+    _pdfParseClass = mod.PDFParse || mod.default?.PDFParse || null;
+    if (!_pdfParseClass) throw new Error('pdf-parse PDFParse class not exported');
+  } catch (e) {
+    console.warn('[spider] pdf-parse unavailable, PDF extraction disabled:', e.message);
+    _pdfParseClass = false;
   }
-  return _pdfParse;
+  return _pdfParseClass;
 }
 
 const DEFAULT_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36 (compatible; MarysHouseGrantFinderBot/0.1; +fundraising@maryshouse.org.au)";
@@ -255,9 +259,16 @@ async function fetchPdfText(url) {
     if (len && len > MAX_PDF_BYTES) return null;
     const buf = Buffer.from(await res.arrayBuffer());
     if (buf.byteLength > MAX_PDF_BYTES) return null;
-    const parse = getPdfParser();
-    const data = await parse(buf);
-    return (data?.text || '').slice(0, 20000);
+    const PDFParse = getPdfParser();
+    if (!PDFParse) return null;
+    const parser = new PDFParse({ data: buf });
+    try {
+      const data = await parser.getText();
+      return (data?.text || '').slice(0, 20000);
+    } finally {
+      // Best-effort cleanup; v2 exposes destroy() to free pdfjs resources.
+      try { await parser.destroy?.(); } catch { /* noop */ }
+    }
   } catch (e) {
     console.warn(`[spider] PDF fetch failed ${url}: ${e.message}`);
     return null;
