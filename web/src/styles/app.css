@@ -864,3 +864,139 @@ input, select { font: inherit; }
   box-shadow: var(--shadow-xs);
 }
 .eligibility-editor:focus { outline: 2px solid var(--rose-600); outline-offset: -2px; }
+
+/* ── Sub-score radar chart (GrantPanel) ────────────────────────────────── */
+.radar-wrap {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) 1fr;
+  gap: 18px;
+  align-items: center;
+}
+@media (max-width: 720px) {
+  .radar-wrap { grid-template-columns: 1fr; }
+}
+.radar-svg {
+  width: 100%;
+  height: auto;
+  max-width: 280px;
+  display: block;
+  margin: 0 auto;
+}
+.radar-grid {
+  fill: none;
+  stroke: var(--border);
+  stroke-width: 1;
+  opacity: 0.6;
+}
+.radar-axis {
+  stroke: var(--border);
+  stroke-width: 1;
+  opacity: 0.5;
+}
+.radar-data {
+  fill: url(#radar-fill);
+  stroke: var(--rose-600, #c0392b);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  transition: fill .3s ease;
+}
+.radar-vertex {
+  stroke: #fff;
+  stroke-width: 2;
+  animation: radar-pop .45s cubic-bezier(.34, 1.56, .64, 1) backwards;
+}
+.radar-vertex:nth-child(1) { animation-delay: 0.25s; }
+.radar-vertex:nth-child(2) { animation-delay: 0.32s; }
+.radar-vertex:nth-child(3) { animation-delay: 0.39s; }
+.radar-vertex:nth-child(4) { animation-delay: 0.46s; }
+.radar-vertex:nth-child(5) { animation-delay: 0.53s; }
+@keyframes radar-pop {
+  0%   { transform: scale(0); transform-origin: center; opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.radar-label {
+  font-size: 11px;
+  font-weight: 600;
+  fill: var(--text-2);
+  letter-spacing: 0.3px;
+}
+
+.radar-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.radar-legend-row {
+  display: grid;
+  grid-template-columns: 10px 78px 1fr 32px;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+.radar-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  box-shadow: 0 0 6px currentColor;
+}
+.radar-legend-label { font-weight: 500; }
+.radar-legend-bar {
+  height: 6px;
+  background: var(--bg-muted);
+  border-radius: 3px;
+  overflow: hidden;
+  display: block;
+}
+.radar-legend-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  transition: none; /* tween hook drives width */
+}
+.radar-legend-val {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.sub-scores-empty {
+  font-size: 13px;
+  color: var(--text-3);
+  font-style: italic;
+}
+.sub-scores-note {
+  margin: 14px 0 0;
+  font-size: 11px;
+  color: var(--text-3);
+  line-height: 1.5;
+}
+
+/* ── Sub-score chips (Dashboard list rows) ─────────────────────────────── */
+.sub-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 4px 0 2px;
+}
+.sub-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 0 1px 1px rgba(0,0,0,0.2);
+}
+.sub-chip-v {
+  background: rgba(255,255,255,0.25);
+  border-radius: 3px;
+  padding: 0 4px;
+  font-size: 10px;
+  letter-spacing: 0;
+}

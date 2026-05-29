@@ -179,8 +179,33 @@ function GrantRow({ grant: g, selected, onClick }) {
             </>
           )}
         </div>
+        <SubScoreChips grant={g} />
         <div className="grant-row-amount">{fmtAmount(g)}</div>
       </div>
+    </div>
+  );
+}
+
+function SubScoreChips({ grant }) {
+  const dims = [
+    { k: 'eligibility_fit', l: 'Elig' },
+    { k: 'mission_fit',     l: 'Miss' },
+    { k: 'funding_value',   l: 'Fund' },
+    { k: 'win_likelihood',  l: 'Win'  },
+    { k: 'timing_score',    l: 'Time' },
+  ];
+  if (!dims.some(d => grant[d.k] != null)) return null;
+  return (
+    <div className="sub-chips">
+      {dims.map(d => {
+        const v = grant[d.k];
+        if (v == null) return null;
+        return (
+          <span key={d.k} className="sub-chip" style={{ background: scoreColor(v) }} title={`${d.l}: ${v}`}>
+            {d.l}<span className="sub-chip-v">{v}</span>
+          </span>
+        );
+      })}
     </div>
   );
 }

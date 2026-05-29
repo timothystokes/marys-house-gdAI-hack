@@ -15,13 +15,31 @@
 // `extractGrant()` and `extractLinks()` for site-specific logic.
 
 import * as cheerio from 'cheerio';
+import { createRequire } from 'node:module';
 import { db } from '../db/db.js';
 import { startStatus, updateStatus, finishStatus, failStatus, isRunning } from './status.js';
+import { assessOpportunity } from '../ai/assess.js';
+
+// pdf-parse ships as CommonJS and runs a self-test on import in some versions;
+// use createRequire so we only load it when needed and don't trip ESM quirks.
+const requireCjs = createRequire(import.meta.url);
+let _pdfParse = null;
+function getPdfParser() {
+  if (_pdfParse) return _pdfParse;
+  try { _pdfParse = requireCjs('pdf-parse'); } catch (e) {
+    console.warn('[spider] pdf-parse not available:', e.message);
+    _pdfParse = () => { throw new Error('pdf-parse unavailable'); };
+  }
+  return _pdfParse;
+}
 
 const DEFAULT_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36 (compatible; MarysHouseGrantFinderBot/0.1; +fundraising@maryshouse.org.au)";
 const USER_AGENT = process.env.SPIDER_USER_AGENT || DEFAULT_UA;
 const ASSET_EXT = /\.(png|jpe?g|gif|svg|webp|pdf|zip|mp4|mp3|css|js|ico|woff2?)(\?|$)/i;
 const GRANT_SIGNALS = /\b(grant|funding|apply|application|deadline|round|fellowship|scholarship)\b/i;
+const GUIDELINE_HINT = /(guideline|criteria|fact[-_ ]?sheet|info|fund|grant|apply|eligibility)/i;
+const MAX_PDF_BYTES = 2 * 1024 * 1024;      // 2 MB
+const MAX_PDFS_PER_OPP = 2;
 
 // ---------- Prepared statements ----------
 const stmts = {
@@ -45,11 +63,39 @@ const stmts = {
   insertGrant: db.prepare(`
     INSERT OR IGNORE INTO grants (
       source_id, title, funder, funder_type, amount_min, amount_max, currency,
-      deadline, eligibility, description, source_url, status
+      deadline, eligibility, description, source_url, status,
+      mission_fit, eligibility_fit, funding_value, win_likelihood, timing_score,
+      score, score_rationale, assessment_json, assessed_at
     ) VALUES (
-      @source_id, @title, @funder, NULL, @amount_min, @amount_max, 'AUD',
-      @deadline, NULL, @description, @source_url, 'open'
+      @source_id, @title, @funder, @funder_type, @amount_min, @amount_max, @currency,
+      @deadline, @eligibility, @description, @source_url, @status,
+      @mission_fit, @eligibility_fit, @funding_value, @win_likelihood, @timing_score,
+      @score, @score_rationale, @assessment_json, datetime('now')
     )
+  `),
+  updateGrantAssessment: db.prepare(`
+    UPDATE grants SET
+      title           = @title,
+      funder          = @funder,
+      funder_type     = @funder_type,
+      amount_min      = @amount_min,
+      amount_max      = @amount_max,
+      currency        = @currency,
+      deadline        = @deadline,
+      eligibility     = @eligibility,
+      description     = @description,
+      status          = @status,
+      mission_fit     = @mission_fit,
+      eligibility_fit = @eligibility_fit,
+      funding_value   = @funding_value,
+      win_likelihood  = @win_likelihood,
+      timing_score    = @timing_score,
+      score           = @score,
+      score_rationale = @score_rationale,
+      assessment_json = @assessment_json,
+      assessed_at     = datetime('now'),
+      updated_at      = datetime('now')
+    WHERE source_url = @source_url
   `),
   touchSource: db.prepare("UPDATE sources SET last_crawled_at = datetime('now') WHERE id = ?"),
 };
@@ -88,9 +134,18 @@ function extractLinks($, baseUrl, seedUrl) {
   return [...out];
 }
 
+function cleanPageText($) {
+  // Remove noise elements before extracting text so the LLM sees mostly content.
+  $('script, style, noscript, nav, footer, header, aside, form, iframe, svg').remove();
+  const root = $('main').first().length ? $('main').first()
+             : $('article').first().length ? $('article').first()
+             : $('body');
+  return root.text().replace(/\s+/g, ' ').trim();
+}
+
 function extractGrant($, url) {
   const title = ($('h1').first().text() || $('title').text() || '').trim();
-  const bodyText = $('main, article, body').first().text().replace(/\s+/g, ' ').trim().slice(0, 4000);
+  const bodyText = cleanPageText($).slice(0, 4000); // hint-extraction text
   if (!title || !GRANT_SIGNALS.test(title + ' ' + bodyText)) return null;
 
   const description = ($('meta[name="description"]').attr('content')
@@ -123,6 +178,52 @@ function extractGrant($, url) {
   }
 
   return { title: title.slice(0, 300), description, amount_min, amount_max, deadline, source_url: url };
+}
+
+// Collect same-origin PDF links that look like grant guidelines/criteria/fact-sheets.
+function findGuidelinePdfs($, baseUrl, seedUrl) {
+  const out = [];
+  const seen = new Set();
+  $('a[href]').each((_, el) => {
+    const raw = $(el).attr('href');
+    if (!raw) return;
+    const abs = normaliseUrl(raw, baseUrl);
+    if (!abs || !/^https?:/i.test(abs)) return;
+    if (!/\.pdf(\?|$)/i.test(abs)) return;
+    if (!sameOrigin(abs, seedUrl)) return;
+    const linkText = ($(el).text() || '').trim();
+    // Either the URL filename or visible link text should hint at guidelines.
+    if (!GUIDELINE_HINT.test(abs) && !GUIDELINE_HINT.test(linkText)) return;
+    if (seen.has(abs)) return;
+    seen.add(abs);
+    out.push(abs);
+  });
+  return out.slice(0, MAX_PDFS_PER_OPP);
+}
+
+async function fetchPdfText(url) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 20000);
+  try {
+    const res = await fetch(url, {
+      redirect: 'follow',
+      signal: ctrl.signal,
+      headers: { 'User-Agent': USER_AGENT, Accept: 'application/pdf' },
+    });
+    if (!res.ok) return null;
+    const ct = res.headers.get('content-type') || '';
+    if (!/pdf/i.test(ct) && !/\.pdf(\?|$)/i.test(url)) return null;
+    const len = Number(res.headers.get('content-length') || 0);
+    if (len && len > MAX_PDF_BYTES) return null;
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.byteLength > MAX_PDF_BYTES) return null;
+    const parse = getPdfParser();
+    const data = await parse(buf);
+    return (data?.text || '').slice(0, 20000);
+  } catch (e) {
+    console.warn(`[spider] PDF fetch failed ${url}: ${e.message}`);
+    return null;
+  } finally { clearTimeout(t); }
 }
 
 async function fetchHtml(url) {
@@ -176,15 +277,73 @@ export async function crawlSource(source, { onProgress } = {}) {
         } else {
           const $ = cheerio.load(html);
 
-          // Extract grant candidate
+          // Extract grant candidate (heuristic pre-filter)
           const grant = extractGrant($, row.url);
           if (grant) {
-            const info = stmts.insertGrant.run({
-              source_id: source.id,
-              funder: source.name,
-              ...grant,
-            });
-            if (info.changes > 0) insertedGrants++;
+            // Pull richer text from the cleaned DOM for assessment.
+            const fullText = cleanPageText($).slice(0, 14000);
+
+            // Look for linked guideline PDFs on the same origin and pull their text.
+            let pdfText = '';
+            const pdfs = findGuidelinePdfs($, row.url, source.url);
+            for (const pdfUrl of pdfs) {
+              if (delay > 0) await sleep(Math.min(delay, 500));
+              const text = await fetchPdfText(pdfUrl);
+              if (text) {
+                pdfText += `\n[PDF: ${pdfUrl}]\n${text}`;
+                updateStatus(source.id, { lastUrl: `${row.url}  (+pdf)` });
+              }
+              if (pdfText.length > 18000) break;
+            }
+
+            // Hand to AI assessment agent.
+            let assessed = null;
+            try {
+              assessed = await assessOpportunity({
+                pageText: fullText,
+                url: row.url,
+                sourceName: source.name,
+                pdfText: pdfText || undefined,
+                hints: grant,
+              });
+            } catch (e) {
+              console.warn(`[spider] assess failed for ${row.url}: ${e.message}`);
+            }
+
+            if (assessed && assessed.is_opportunity !== false) {
+              const info = stmts.insertGrant.run({
+                source_id: source.id,
+                source_url: row.url,
+                ...assessed,
+              });
+              if (info.changes > 0) insertedGrants++;
+            } else if (!assessed) {
+              // AI unavailable — fall back to heuristic insert so we don't lose the page.
+              const info = stmts.insertGrant.run({
+                source_id: source.id,
+                source_url: row.url,
+                title: grant.title,
+                funder: source.name,
+                funder_type: null,
+                amount_min: grant.amount_min,
+                amount_max: grant.amount_max,
+                currency: 'AUD',
+                deadline: grant.deadline,
+                eligibility: '',
+                description: grant.description,
+                status: 'open',
+                mission_fit: null,
+                eligibility_fit: null,
+                funding_value: null,
+                win_likelihood: null,
+                timing_score: null,
+                score: null,
+                score_rationale: 'Pending AI assessment.',
+                assessment_json: null,
+              });
+              if (info.changes > 0) insertedGrants++;
+            }
+            // else: assessed.is_opportunity === false → skip insert; page is not a real opportunity.
           }
 
           // Enqueue same-origin links if we have depth budget

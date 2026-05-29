@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client.js';
 import { scoreColor, fitLabel, fmtAmount, fmtDeadline } from '../lib/utils.js';
+import SubScoreRadar from './SubScoreRadar.jsx';
 
 export default function GrantPanel({ grantId }) {
   const [grant, setGrant] = useState(null);
@@ -118,6 +119,16 @@ export default function GrantPanel({ grantId }) {
             <div className="score-rationale">💡 {grant.score_rationale}</div>
           )}
         </div>
+      </div>
+
+      {/* ── Sub-score breakdown ── */}
+      <div className="glass-block">
+        <h3>Score Breakdown</h3>
+        <SubScoreRadar grant={grant} />
+        <p className="sub-scores-note">
+          Final score weights — Mission 35% · Eligibility 25% · Funding 15% · Win 15% · Timing 10%.
+          Eligibility acts as a gate: a low eligibility score caps the final.
+        </p>
       </div>
 
       {/* ── Eligibility ── */}

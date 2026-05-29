@@ -72,11 +72,18 @@ export function initDb() {
     CREATE INDEX IF NOT EXISTS idx_grants_deadline ON grants(deadline);
   `);
 
-  // Best-effort migration for older DBs missing the new source columns.
+  // Best-effort migration for older DBs missing newer columns.
   for (const [col, ddl] of [
     ['max_pages', 'ALTER TABLE sources ADD COLUMN max_pages INTEGER NOT NULL DEFAULT 25'],
     ['max_depth', 'ALTER TABLE sources ADD COLUMN max_depth INTEGER NOT NULL DEFAULT 2'],
     ['request_delay_ms', 'ALTER TABLE sources ADD COLUMN request_delay_ms INTEGER NOT NULL DEFAULT 1000'],
+    ['mission_fit', 'ALTER TABLE grants ADD COLUMN mission_fit INTEGER'],
+    ['eligibility_fit', 'ALTER TABLE grants ADD COLUMN eligibility_fit INTEGER'],
+    ['funding_value', 'ALTER TABLE grants ADD COLUMN funding_value INTEGER'],
+    ['win_likelihood', 'ALTER TABLE grants ADD COLUMN win_likelihood INTEGER'],
+    ['timing_score', 'ALTER TABLE grants ADD COLUMN timing_score INTEGER'],
+    ['assessment_json', 'ALTER TABLE grants ADD COLUMN assessment_json TEXT'],
+    ['assessed_at', 'ALTER TABLE grants ADD COLUMN assessed_at TEXT'],
   ]) {
     try { db.exec(ddl); } catch { /* already exists */ }
   }
