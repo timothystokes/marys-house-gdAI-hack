@@ -190,6 +190,25 @@ body {
   height: clamp(36px, 5vh, 56px);
   object-fit: contain;
 }
+/* First slide gets a much larger hero-style logo. */
+.slide[data-slide="1"] .logo-wrap {
+  margin-bottom: 18px;
+  justify-content: center;
+}
+.slide[data-slide="1"] .logo-img {
+  height: clamp(160px, 28vh, 320px);
+}
+.slide[data-slide="1"] .logo-placeholder {
+  height: clamp(160px, 28vh, 320px);
+  padding: 18px 36px;
+}
+.slide[data-slide="1"] .logo-placeholder .dot {
+  width: 64px;
+  height: 64px;
+}
+.slide[data-slide="1"] .logo-placeholder span {
+  font-size: clamp(22px, 3vw, 36px);
+}
 .logo-placeholder {
   height: clamp(36px, 5vh, 56px);
   display: flex;
@@ -540,7 +559,7 @@ body {
       <!-- Logo -->
       <div class="logo-wrap">
         <!-- Swap src below to your maryhouse.jpeg once available -->
-        <img src="maryhouse.jpeg" class="logo-img"
+        <img width="200" src="maryhouse.jpeg" class="logo-img"
              onerror="this.style.display='none'; document.getElementById('logo-fallback').style.display='flex';"
              alt="Mary's House Services logo">
         <div id="logo-fallback" class="logo-placeholder" style="display:none;">
@@ -549,9 +568,7 @@ body {
         </div>
       </div>
 
-      <div class="divider" style="margin-top:4px;"></div>
-
-      <h1 class="slide-title" style="margin-top:10px;">
+      <h1 class="slide-title" style="margin-top:-10px;">
         <span class="grad">Funding Opportunity </span><br>Finder
       </h1>
 
