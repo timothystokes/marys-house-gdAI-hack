@@ -3,6 +3,22 @@ import { api } from '../api/client.js';
 import GrantPanel from '../components/GrantPanel.jsx';
 import { scoreColor, fitLabel, fmtAmount, daysUntil } from '../lib/utils.js';
 
+const TAG_RULES = [
+  { label: 'Women',      emoji: '👩', regex: /women|woman|domestic|family violence|dfv|gender/i },
+  { label: 'Children',   emoji: '🧒', regex: /child|children|youth|young people|childhood|0-8|early childhood/i },
+  { label: 'Housing',    emoji: '🏠', regex: /housing|accommodation|refuge|homelessness|affordable housing/i },
+  { label: 'Wellbeing',  emoji: '💚', regex: /health|mental health|wellbeing|trauma|recovery|therapeutic/i },
+  { label: 'Technology', emoji: '💻', regex: /digital|technology|data|transformation|software|capability/i },
+  { label: 'Indigenous', emoji: '🌏', regex: /indigenous|aboriginal|torres strait/i },
+  { label: 'Community',  emoji: '🤝', regex: /community|outreach|social sector/i },
+  { label: 'Employment', emoji: '💼', regex: /employment|workforce|economic|re-entering/i },
+];
+
+function getGrantTags(grant) {
+  const text = `${grant.title} ${grant.description || ''} ${grant.eligibility || ''} ${grant.funder || ''}`;
+  return TAG_RULES.filter(t => t.regex.test(text)).map(t => t.label);
+}
+
 export default function Dashboard() {
   const [grants, setGrants] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -11,6 +27,7 @@ export default function Dashboard() {
   const [status, setStatus] = useState('');
   const [sort, setSort] = useState('score');
   const [selectedId, setSelectedId] = useState(null);
+  const [activeTag, setActiveTag] = useState(null);
 
   useEffect(() => {
     setLoading(true);
@@ -23,7 +40,6 @@ export default function Dashboard() {
     })
       .then(data => {
         setGrants(data);
-        // Auto-select first grant on initial load only
         if (!selectedId && data.length > 0) setSelectedId(data[0].id);
       })
       .catch(console.error)
@@ -31,19 +47,52 @@ export default function Dashboard() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, funderType, status, sort]);
 
-  const stats = useMemo(() => {
-    const total    = grants.length;
-    const high     = grants.filter(g => (g.score ?? 0) >= 85).length;
-    const closing  = grants.filter(g => g.status === 'closing_soon').length;
-    const maxTotal = grants.reduce((s, g) => s + (g.amount_max || 0), 0);
-    return { total, high, closing, maxTotal };
+  // Derive available tags from current grants
+  const availableTags = useMemo(() => {
+    const counts = {};
+    for (const g of grants) {
+      for (const tag of getGrantTags(g)) {
+        counts[tag] = (counts[tag] || 0) + 1;
+      }
+    }
+    return TAG_RULES.filter(r => counts[r.label]).map(r => ({ ...r, count: counts[r.label] }));
   }, [grants]);
+
+  // Apply tag filter client-side
+  const visibleGrants = useMemo(() => {
+    if (!activeTag) return grants;
+    return grants.filter(g => getGrantTags(g).includes(activeTag));
+  }, [grants, activeTag]);
+
+  const stats = useMemo(() => {
+    const total    = visibleGrants.length;
+    const high     = visibleGrants.filter(g => (g.score ?? 0) >= 85).length;
+    const closing  = visibleGrants.filter(g => g.status === 'closing_soon').length;
+    const maxTotal = visibleGrants.reduce((s, g) => s + (g.amount_max || 0), 0);
+    return { total, high, closing, maxTotal };
+  }, [visibleGrants]);
 
   return (
     <div className="workspace">
 
       {/* ──────────── LEFT: list column ──────────── */}
       <div className="list-col">
+
+        {/* Tag chips */}
+        {availableTags.length > 0 && (
+          <div className="tag-filter-bar">
+            {availableTags.map(t => (
+              <button
+                key={t.label}
+                className={`tag-chip${activeTag === t.label ? ' tag-chip-active' : ''}`}
+                onClick={() => setActiveTag(activeTag === t.label ? null : t.label)}
+              >
+                <span>{t.emoji}</span> {t.label}
+                <span className="tag-chip-count">{t.count}</span>
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Filters */}
         <div className="list-filters">
@@ -110,12 +159,12 @@ export default function Dashboard() {
               Loading…
             </div>
           )}
-          {!loading && grants.length === 0 && (
+          {!loading && visibleGrants.length === 0 && (
             <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>
               No grants match your filters.
             </div>
           )}
-          {grants.map(g => (
+          {visibleGrants.map(g => (
             <GrantRow
               key={g.id}
               grant={g}

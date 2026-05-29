@@ -5,10 +5,14 @@ export default function App() {
     <div className="app">
       <header className="topbar">
         <div className="brand">
-          <div className="brand-icon">🏠</div>
+          <img
+            src="/maryhouse.jpeg"
+            alt="Mary's House Services"
+            className="brand-logo"
+          />
           <div>
-            <div className="brand-title">Mary's House</div>
-            <div className="brand-sub">Grant Intelligence</div>
+            <div className="brand-title">Funding Opportunity Finder</div>
+            <div className="brand-sub">Mary's House Services</div>
           </div>
         </div>
         <nav className="nav">
@@ -17,10 +21,6 @@ export default function App() {
           <NavLink to="/eligibility">Eligibility</NavLink>
         </nav>
       </header>
-
-      <div className="banner">
-        ⚠️&nbsp; All outputs are AI-generated drafts. Human review required before any submission.
-      </div>
 
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         <Outlet />
