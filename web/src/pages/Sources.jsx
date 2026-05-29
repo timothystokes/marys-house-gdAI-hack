@@ -41,31 +41,18 @@ export default function Sources() {
     catch (e) { setMessage(`Error: ${e.message}`); }
   }
 
-  async function crawlAll() {
-    setMessage(null);
-    try { await api.sources.crawlAll(); refresh(); }
-    catch (e) { setMessage(`Error: ${e.message}`); }
-  }
-
   async function save(s, patch) {
     setMessage(null);
     try { await api.sources.update(s.id, patch); refresh(); }
     catch (e) { setMessage(`Error: ${e.message}`); }
   }
 
-  const anyRunning = sources.some(s => s.crawl?.status === 'running');
-
   return (
     <div className="sources-page">
       <div className="page-header">
-        <h1 className="page-title">Scrape Sources</h1>
-        <button onClick={crawlAll} disabled={anyRunning} className="btn-primary">
-          {anyRunning
-            ? <><span className="spinner" /> Crawl in progress…</>
-            : '🔍 Search all enabled'}
-        </button>
+        <h1 className="page-title">Funding Sources</h1>
       </div>
-      <p className="page-sub">Each of these sources is crawled for funding opportunities. Edit, enable/disable, or trigger a search any time.</p>
+      <h2 className="page-sub">These sources will be assessed for new opportunities daily.</h2>
 
       {message && <div className="info-msg">{message}</div>}
 
