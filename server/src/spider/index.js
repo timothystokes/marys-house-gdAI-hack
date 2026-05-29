@@ -66,8 +66,10 @@ const stmts = {
   markSkipped: db.prepare(`UPDATE crawl_pages SET status = 'skipped', error = ?, fetched_at = datetime('now') WHERE id = ?`),
   // Re-queue previously failed pages so "Search now" acts as a retry trigger.
   requeueFailed: db.prepare(`UPDATE crawl_pages SET status = 'pending', error = NULL, http_status = NULL WHERE source_id = ? AND status = 'failed'`),
+  // Re-queue done/skipped pages so re-crawling refreshes assessments on every page we've seen.
+  requeueAll: db.prepare(`UPDATE crawl_pages SET status = 'pending', error = NULL, http_status = NULL WHERE source_id = ? AND status IN ('done', 'failed', 'skipped')`),
   insertGrant: db.prepare(`
-    INSERT OR IGNORE INTO grants (
+    INSERT INTO grants (
       source_id, title, funder, funder_type, amount_min, amount_max, currency,
       deadline, eligibility, description, source_url, status,
       mission_fit, eligibility_fit, funding_value, win_likelihood, timing_score,
@@ -78,6 +80,27 @@ const stmts = {
       @mission_fit, @eligibility_fit, @funding_value, @win_likelihood, @timing_score,
       @score, @score_rationale, @assessment_json, @assessed_at
     )
+    ON CONFLICT(source_url) DO UPDATE SET
+      title           = excluded.title,
+      funder          = excluded.funder,
+      funder_type     = excluded.funder_type,
+      amount_min      = excluded.amount_min,
+      amount_max      = excluded.amount_max,
+      currency        = excluded.currency,
+      deadline        = excluded.deadline,
+      eligibility     = excluded.eligibility,
+      description     = excluded.description,
+      status          = excluded.status,
+      mission_fit     = excluded.mission_fit,
+      eligibility_fit = excluded.eligibility_fit,
+      funding_value   = excluded.funding_value,
+      win_likelihood  = excluded.win_likelihood,
+      timing_score    = excluded.timing_score,
+      score           = excluded.score,
+      score_rationale = excluded.score_rationale,
+      assessment_json = excluded.assessment_json,
+      assessed_at     = excluded.assessed_at,
+      updated_at      = datetime('now')
   `),
   updateGrantAssessment: db.prepare(`
     UPDATE grants SET
@@ -275,8 +298,11 @@ export async function crawlSource(source, { onProgress } = {}) {
 
   // Seed the queue with the source URL if we've never seen it.
   stmts.enqueue.run(source.id, normaliseUrl(source.url, source.url) || source.url, 0);
-  // Re-queue previously failed pages so "Search now" acts as a retry.
-  stmts.requeueFailed.run(source.id);
+  // Re-crawl semantics: re-queue every page we've previously visited so each crawl
+  // refreshes assessments against the current eligibility profile and catches
+  // updated deadlines/amounts. New pages discovered via outbound links during
+  // this run are still enqueued and processed in the same loop.
+  stmts.requeueAll.run(source.id);
 
   let fetchedThisRun = 0;
   let insertedGrants = 0;
