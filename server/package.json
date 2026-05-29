@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "node --watch src/index.js",
     "start": "node src/index.js",
-    "seed": "node src/db/seed/seed.js"
+    "seed:demo": "node src/db/seed/seed.js",
+    "seed:sources": "node src/db/seed/seed-sources.js"
   },
   "dependencies": {
     "better-sqlite3": "^11.3.0",

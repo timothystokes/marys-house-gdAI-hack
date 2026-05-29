@@ -14,8 +14,8 @@ Prerequisites: **Node.js ≥ 20**.
 # 1. Install all workspace dependencies (server + web)
 npm install
 
-# 2. Seed the SQLite database with sample sources and grants
-npm run seed
+# 2. Load your seed sources from server/src/spider/seeds.json (idempotent upsert)
+npm run seed:sources
 
 # 3. Run the backend API and React UI together (recommended)
 npm run dev
@@ -27,7 +27,7 @@ npm run dev:server   # Express API on :3001 (auto-reloads)
 npm run dev:web      # Vite React UI on :5173 (proxies /api → :3001)
 ```
 
-> 💡 The dashboard, sources admin, and grant detail pages all work against the seeded data without any AI key. To use the **Generate draft** button (and live AI scoring later), copy `.env.example` to `.env` and set `GITHUB_TOKEN` to a [GitHub personal access token](https://github.com/settings/tokens) with access to [GitHub Models](https://github.com/marketplace/models).
+> 💡 Then open http://localhost:5173/sources and click **"🔍 Search all enabled sources"** to trigger your first crawl. To use the **Generate draft** button (and live AI scoring later), copy `.env.example` to `.env` and set `GITHUB_TOKEN` to a [GitHub personal access token](https://github.com/settings/tokens) with access to [GitHub Models](https://github.com/marketplace/models).
 
 Useful endpoints once the server is running:
 
@@ -39,7 +39,17 @@ Useful endpoints once the server is running:
 | `GET/POST/PATCH/DELETE /api/sources` | Manage scrape sources |
 | `POST /api/drafts/:grantId` | Generate AI draft application (requires `GITHUB_TOKEN`) |
 
-To reset the database at any time, re-run `npm run seed` (it clears existing data first).
+### Data commands
+
+| Command | Effect |
+|---|---|
+| `npm run seed:sources` | **Idempotent upsert** from `server/src/spider/seeds.json` into the `sources` table. Re-run any time after editing the seed file — won't touch grants, drafts, or sources you've added via the UI (unless they share a URL). |
+| `npm run seed:demo` | **⚠️ Destructive** — wipes sources/grants/drafts and inserts a fixed set of demo data for UI development. Don't run this once you have real data. |
+
+To reset the database manually:
+```bash
+sqlite3 data/grants.db "DELETE FROM drafts; DELETE FROM grants; DELETE FROM crawl_pages; DELETE FROM sources;"
+```
 
 ---
 

@@ -1,0 +1,16 @@
+[
+  {
+    "name": "Australian Government Grants",
+    "url": "https://help.grants.gov.au//getting-started-with-grantconnect/information-made-easy/current-opportunities/",
+    "maxPages": 30,
+    "maxDepth": 2,
+    "requestDelayMs": 1500
+  },
+  {
+    "name": "Our Community — Funding Centre",
+    "url": "https://www.fundingcentre.com.au/",
+    "maxPages": 30,
+    "maxDepth": 2,
+    "requestDelayMs": 1500
+  }
+]

@@ -26,7 +26,7 @@ export default function GrantDetail() {
     }
   }
 
-  if (!grant) return <div className="empty">Loading grant…</div>;
+  if (!grant) return <div className="empty">Loading opportunity…</div>;
 
   return (
     <div className="detail">

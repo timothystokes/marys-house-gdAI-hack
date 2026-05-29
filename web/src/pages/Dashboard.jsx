@@ -47,12 +47,12 @@ export default function Dashboard() {
   return (
     <div className="dashboard">
       <section className="hero">
-        <h1>Grant Opportunities</h1>
+        <h1>Funding Opportunities</h1>
         <p>Ranked by AI fit and likely value for Mary's House Services.</p>
       </section>
 
       <section className="stats">
-        <Stat label="Open grants" value={stats.total} />
+        <Stat label="Open opportunities" value={stats.total} />
         <Stat label="High-fit (≥85)" value={stats.high} accent="#10b981" />
         <Stat label="Closing soon" value={stats.closing} accent="#f59e0b" />
         <Stat label="Total ceiling" value={`$${(stats.maxTotal / 1e6).toFixed(1)}M`} accent="#3b82f6" />
@@ -82,7 +82,7 @@ export default function Dashboard() {
       </section>
 
       {loading ? <div className="empty">Loading…</div> :
-        grants.length === 0 ? <div className="empty">No grants match your filters.</div> :
+        grants.length === 0 ? <div className="empty">No opportunities match your filters.</div> :
           <ul className="grants">
             {grants.map(g => {
               const days = daysUntil(g.deadline);

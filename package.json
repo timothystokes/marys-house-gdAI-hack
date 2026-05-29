@@ -8,7 +8,8 @@
     "dev": "concurrently -n server,web -c blue,magenta \"npm run dev -w server\" \"npm run dev -w web\"",
     "dev:server": "npm run dev -w server",
     "dev:web": "npm run dev -w web",
-    "seed": "npm run seed -w server",
+    "seed:demo": "npm run seed:demo -w server",
+    "seed:sources": "npm run seed:sources -w server",
     "build": "npm run build -w web"
   },
   "devDependencies": {

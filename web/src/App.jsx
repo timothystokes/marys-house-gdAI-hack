@@ -8,7 +8,7 @@ export default function App() {
           <span className="brand-dot" />
           <div>
             <div className="brand-title">Mary's House</div>
-            <div className="brand-sub">Grant Finder</div>
+            <div className="brand-sub">Opportunity Finder</div>
           </div>
         </div>
         <nav className="nav">
