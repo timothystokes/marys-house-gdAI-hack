@@ -98,10 +98,15 @@ button { font: inherit; cursor: pointer; }
   border-radius: 8px; font-weight: 600; }
 .btn-primary:hover { background: var(--primary-dark); }
 .btn-primary:disabled { opacity: 0.6; cursor: wait; }
+.btn-secondary { background: white; color: var(--primary); border: 1px solid var(--primary);
+  padding: 6px 12px; border-radius: 8px; font-weight: 500; }
+.btn-secondary:hover { background: var(--primary); color: white; }
+.btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-danger { background: white; color: var(--danger); border: 1px solid var(--danger);
   padding: 6px 12px; border-radius: 8px; }
 .btn-danger:hover { background: var(--danger); color: white; }
 .error { background: #fee2e2; color: #991b1b; padding: 10px; border-radius: 8px; margin-bottom: 10px; }
+.info { background: #dbeafe; color: #1e40af; padding: 10px 14px; border-radius: 8px; margin: 12px 0; }
 .muted { color: var(--muted); }
 
 /* Sources page */

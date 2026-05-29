@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db/db.js';
+import { crawlSource, crawlAll } from '../spider/index.js';
 
 const router = Router();
 
@@ -34,6 +35,29 @@ router.patch('/:id', (req, res) => {
 router.delete('/:id', (req, res) => {
   db.prepare('DELETE FROM sources WHERE id = ?').run(req.params.id);
   res.status(204).end();
+});
+
+// Trigger a crawl for all enabled sources
+router.post('/crawl-all', (_req, res) => {
+  try {
+    const results = crawlAll();
+    const inserted = results.reduce((s, r) => s + r.inserted, 0);
+    res.json({ sourcesCrawled: results.length, grantsInserted: inserted, results });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Trigger a crawl for a single source
+router.post('/:id/crawl', (req, res) => {
+  const source = db.prepare('SELECT * FROM sources WHERE id = ?').get(req.params.id);
+  if (!source) return res.status(404).json({ error: 'not_found' });
+  try {
+    const result = crawlSource(source);
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 export default router;

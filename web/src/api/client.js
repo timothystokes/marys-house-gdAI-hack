@@ -23,6 +23,8 @@ export const api = {
     create: (body) => req('/sources', { method: 'POST', body: JSON.stringify(body) }),
     update: (id, body) => req(`/sources/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
     remove: (id) => req(`/sources/${id}`, { method: 'DELETE' }),
+    crawl: (id) => req(`/sources/${id}/crawl`, { method: 'POST' }),
+    crawlAll: () => req('/sources/crawl-all', { method: 'POST' }),
   },
   drafts: {
     create: (grantId) => req(`/drafts/${grantId}`, { method: 'POST' }),

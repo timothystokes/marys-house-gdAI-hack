@@ -5,6 +5,8 @@ export default function Sources() {
   const [sources, setSources] = useState([]);
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
+  const [crawling, setCrawling] = useState({}); // { [id]: true } or { all: true }
+  const [message, setMessage] = useState(null);
 
   const refresh = () => api.sources.list().then(setSources);
   useEffect(() => { refresh(); }, []);
@@ -28,10 +30,45 @@ export default function Sources() {
     refresh();
   }
 
+  async function crawlOne(s) {
+    setCrawling(c => ({ ...c, [s.id]: true }));
+    setMessage(null);
+    try {
+      const result = await api.sources.crawl(s.id);
+      setMessage(`Crawled "${s.name}" — ${result.inserted} new grant${result.inserted === 1 ? '' : 's'} added.`);
+      refresh();
+    } catch (e) {
+      setMessage(`Error: ${e.message}`);
+    } finally {
+      setCrawling(c => ({ ...c, [s.id]: false }));
+    }
+  }
+
+  async function crawlAll() {
+    setCrawling(c => ({ ...c, all: true }));
+    setMessage(null);
+    try {
+      const result = await api.sources.crawlAll();
+      setMessage(`Crawled ${result.sourcesCrawled} source${result.sourcesCrawled === 1 ? '' : 's'} — ${result.grantsInserted} new grant${result.grantsInserted === 1 ? '' : 's'} added.`);
+      refresh();
+    } catch (e) {
+      setMessage(`Error: ${e.message}`);
+    } finally {
+      setCrawling(c => ({ ...c, all: false }));
+    }
+  }
+
   return (
     <div className="sources">
-      <h1>Scrape Sources</h1>
+      <div className="block-head">
+        <h1>Scrape Sources</h1>
+        <button onClick={crawlAll} disabled={crawling.all} className="btn-primary">
+          {crawling.all ? 'Searching…' : '🔍 Search all enabled sources'}
+        </button>
+      </div>
       <p className="muted">Add or remove the websites the spider crawls for grant opportunities.</p>
+
+      {message && <div className="info">{message}</div>}
 
       <form onSubmit={handleAdd} className="source-form">
         <input placeholder="Source name (e.g. Philanthropy Australia)" value={name} onChange={e => setName(e.target.value)} />
@@ -52,6 +89,9 @@ export default function Sources() {
                 <input type="checkbox" checked={!!s.enabled} onChange={() => toggle(s)} />
                 <span>{s.enabled ? 'Enabled' : 'Disabled'}</span>
               </label>
+              <button onClick={() => crawlOne(s)} disabled={!s.enabled || crawling[s.id]} className="btn-secondary">
+                {crawling[s.id] ? 'Searching…' : 'Search now'}
+              </button>
               <button onClick={() => remove(s)} className="btn-danger">Remove</button>
             </div>
           </li>

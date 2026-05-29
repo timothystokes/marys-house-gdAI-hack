@@ -108,12 +108,15 @@ npm install
 
 ### Run (dev)
 ```bash
-# Backend API + scheduled spider
-npm run dev:server
+# Run BOTH the backend API and React frontend together (recommended)
+npm run dev
 
-# React frontend
-npm run dev:web
+# …or run them individually in separate terminals
+npm run dev:server   # Backend API on :3001
+npm run dev:web      # React frontend on :5173
 ```
+
+> ⚠️ The UI needs the API server running, otherwise the dashboard will appear empty. `npm run dev` starts both for you.
 
 ### Environment variables
 Copy `.env.example` to `.env` and fill in:
